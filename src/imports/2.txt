@@ -1,0 +1,1612 @@
+# Nivara — Complete Civic Grievance Management Platform
+
+Use the **existing Nivara Figma design/screenshots as the strict visual reference**.
+
+Do NOT redesign the visual language from scratch.
+
+Preserve the existing:
+
+* Nivara branding
+* navy blue government-style top bar
+* white/light-gray application background
+* left collapsible sidebar
+* top role switcher: Citizen / Officer / Admin
+* rounded cards
+* blue primary buttons
+* subtle borders and shadows
+* typography hierarchy
+* status badges
+* KPI cards
+* chart styling
+* spacing system
+* icon style
+* light/dark mode
+* responsive behavior
+* hamburger menu
+* notification bell
+* user profile area
+* breadcrumb navigation
+
+The current dashboards are good, but they are only the overview layer.
+
+Now expand Nivara into a **complete AI-powered government grievance management system**.
+
+The product must feel like a real production-grade civic platform, not a static analytics dashboard.
+
+---
+
+# 1. GLOBAL APPLICATION STRUCTURE
+
+Create three complete role-based experiences.
+
+## Citizen
+
+Sidebar:
+
+Dashboard
+My Grievances
+Submit Grievance
+Notifications
+Help & Support
+Profile
+Settings
+
+## Officer
+
+Sidebar:
+
+Dashboard
+Priority Queue
+My Assignments
+All Grievances
+SLA Monitoring
+Escalations
+Geographic Intelligence
+Analytics
+Profile
+Settings
+
+## Admin
+
+Sidebar:
+
+Dashboard
+All Grievances
+Departments
+Officers
+Citizens
+Geographic Intelligence
+Complaint Clusters
+AI Insights
+SLA Management
+Escalations
+Analytics
+Reports
+Audit Logs
+Settings
+
+Keep the existing role switcher at the top.
+
+The active role should appear as a white pill.
+
+---
+
+# 2. CITIZEN EXPERIENCE
+
+Create the following screens.
+
+## Citizen Dashboard
+
+Keep the existing dashboard design.
+
+Include:
+
+KPI cards:
+
+* Total Grievances
+* Pending
+* In Progress
+* Resolved
+* Reopened
+* Average Resolution Time
+
+Main content:
+
+* Grievance Status Trend
+* Grievances by Category
+* Recent Grievances
+* AI-assisted insight
+* Grievance timeline
+
+Add prominent buttons:
+
+[+ Submit New Grievance]
+
+[Track Grievances]
+
+---
+
+# 3. CITIZEN — SUBMIT GRIEVANCE
+
+This is a critical missing screen.
+
+Create a dedicated multi-step grievance submission workflow.
+
+Header:
+
+Submit New Grievance
+
+Progress:
+
+1. Describe Issue
+2. Location
+3. Evidence
+4. Review
+5. Submitted
+
+## Step 1 — Describe Issue
+
+Large text input:
+
+"Describe your grievance in your own words..."
+
+Include:
+
+[🎙 Voice Input]
+
+[Type Complaint]
+
+[🌐 Language]
+
+Support multilingual input.
+
+Display:
+
+Detected Language:
+Hindi
+
+Allow changing language.
+
+Add AI assistant panel:
+
+"Tell us what happened. You can describe the problem naturally."
+
+AI should automatically extract:
+
+Category
+Subcategory
+Issue duration
+Urgency
+Affected people
+
+Example:
+
+Category:
+Roads
+
+Subcategory:
+Pothole
+
+AI Confidence:
+94%
+
+Show this as an editable recommendation.
+
+Include:
+
+[Continue]
+
+---
+
+# 4. CITIZEN — LOCATION SELECTION
+
+Create a dedicated map screen.
+
+This is REQUIRED.
+
+Use a realistic interactive map visual similar to Mapbox / Google Maps / OpenStreetMap.
+
+Do not use a generic blank rectangle.
+
+Map should contain:
+
+* roads
+* streets
+* locality labels
+* landmarks
+* map controls
+* zoom controls
+* current-location button
+* search location
+* draggable location marker
+
+Header:
+
+Where is the problem located?
+
+Options:
+
+[Use My Current Location]
+
+[Select Location Manually]
+
+Location search field:
+
+"Search area, street, landmark..."
+
+Show selected location card:
+
+Location:
+Main Gate Road, Sector 7
+
+Latitude:
+21.2514
+
+Longitude:
+81.6296
+
+Accuracy:
+±12 m
+
+Allow the citizen to drag the marker.
+
+Add:
+
+[Confirm Location]
+
+---
+
+# 5. CITIZEN — EVIDENCE UPLOAD
+
+Create evidence upload screen.
+
+Allow:
+
+Photos
+Videos
+Documents
+
+Large upload area:
+
+Drag & drop files here
+
+or
+
+[Upload Evidence]
+
+Show uploaded evidence thumbnails.
+
+Before submission, display AI-assisted extraction:
+
+Issue detected:
+Road damage
+
+Visual confidence:
+91%
+
+Do not automatically make government decisions.
+
+---
+
+# 6. CITIZEN — REVIEW & SUBMIT
+
+Create final review screen.
+
+Show:
+
+Complaint description
+
+Category
+
+Priority recommendation
+
+Location map preview
+
+Attachments
+
+AI extracted information
+
+Potential duplicate warning if applicable.
+
+Example:
+
+⚠ Possible similar grievance found
+
+GRV-1021
+
+"Large pothole near railway crossing"
+
+Similarity:
+93%
+
+Actions:
+
+[View Similar Grievance]
+
+[Continue Anyway]
+
+Final button:
+
+[Submit Grievance]
+
+After submission create a success screen:
+
+✓ Grievance Submitted
+
+Complaint ID:
+
+GRV-1024
+
+Status:
+Submitted
+
+Expected SLA:
+24 hours
+
+Assigned Department:
+Public Works Department
+
+Buttons:
+
+[Track Grievance]
+
+[Back to Dashboard]
+
+---
+
+# 7. CITIZEN — GRIEVANCE DETAIL
+
+Create a complete grievance detail screen.
+
+Header:
+
+GRV-1024
+
+Pothole near Main Gate
+
+Status:
+In Progress
+
+Priority:
+High
+
+Category:
+Roads
+
+Include:
+
+## Complaint Summary
+
+AI-generated concise summary:
+
+"Major road damage near XYZ School. Reported for 5 days and potentially affecting approximately 200 households."
+
+## Location
+
+Large map card with exact complaint marker.
+
+## Complaint Timeline
+
+Submitted
+↓
+AI Analyzed
+↓
+Department Assigned
+↓
+Officer Assigned
+↓
+Field Verification
+↓
+Resolution
+↓
+Citizen Confirmation
+
+Each timeline event must show:
+
+* timestamp
+* actor
+* action
+* status
+
+## Assigned Department
+
+Public Works Department
+
+Officer:
+Rajesh Kumar
+
+## SLA
+
+Deadline:
+21 Aug, 10:32 AM
+
+Remaining:
+08h 42m
+
+Status:
+Within SLA
+
+## Communication
+
+Chat-style communication between citizen and officer.
+
+Allow:
+
+[Reply]
+
+[Upload Additional Evidence]
+
+---
+
+# 8. CITIZEN — RESOLUTION
+
+Create a resolution verification screen.
+
+Show:
+
+Before image
+
+After image
+
+Officer resolution note
+
+Resolution documents
+
+AI-assisted evidence assessment:
+
+✓ Location appears consistent
+
+✓ Reported issue appears addressed
+
+AI confidence:
+87%
+
+Clearly label:
+
+"AI-assisted assessment — final decision remains with authorized officer."
+
+Citizen actions:
+
+[Accept Resolution]
+
+[Reject Resolution]
+
+[Reopen Grievance]
+
+[Rate Resolution]
+
+[Submit Feedback]
+
+---
+
+# 9. OFFICER DASHBOARD
+
+Preserve the current officer dashboard style.
+
+KPI cards:
+
+Assigned to Me
+High Priority
+Due Today
+Resolved This Week
+SLA Compliance
+Average Response Time
+
+Main section:
+
+## AI Priority Queue
+
+This should be visually prominent.
+
+Rows:
+
+GRV-1084
+Water Supply
+CRITICAL
+Score 94
+2 hrs left
+Escalated
+
+GRV-1079
+Electricity
+CRITICAL
+Score 91
+4 hrs left
+Assigned
+
+GRV-1072
+Sanitation
+HIGH
+Score 84
+12 hrs left
+In Progress
+
+Include filters:
+
+Priority
+Category
+Location
+SLA
+Status
+AI Confidence
+
+---
+
+# 10. OFFICER — GRIEVANCE DETAIL
+
+Create the most important officer screen.
+
+Header:
+
+GRV-1084
+
+Water Supply Failure
+
+Status:
+Escalated
+
+Priority:
+CRITICAL
+
+AI Priority Score:
+
+91 / 100
+
+Create an explainable priority card.
+
+## WHY THIS PRIORITY?
+
+Safety Risk       +30
+
+Severity          +25
+
+People Affected   +15
+
+Duration          +10
+
+Location Impact   +06
+
+Similar Complaints +05
+
+TOTAL             91
+
+Add a small visual score indicator.
+
+Button:
+
+[View AI Explanation]
+
+---
+
+# 11. AI CLASSIFICATION PANEL
+
+Show:
+
+Category:
+Water Supply
+
+Subcategory:
+Water Logging
+
+Confidence:
+96%
+
+Possible alternatives:
+
+Drainage — 72%
+Sanitation — 41%
+Roads — 24%
+
+Button:
+
+[Accept AI Classification]
+
+[Change Classification]
+
+---
+
+# 12. DUPLICATE DETECTION
+
+Create a dedicated AI similarity section.
+
+Header:
+
+Possible Duplicate
+
+New grievance:
+
+"Large water leakage near Sector 7 market"
+
+Existing grievance:
+
+GRV-1048
+
+"Water pipe leakage near Sector 7"
+
+Similarity:
+
+93%
+
+Show side-by-side comparison.
+
+Compare:
+
+Location
+Description
+Category
+Time
+Attachments
+
+Actions:
+
+[Link as Duplicate]
+
+[Not a Duplicate]
+
+[View Existing Complaint]
+
+---
+
+# 13. GRIEVANCE CLUSTER VIEW
+
+Create a dedicated screen called:
+
+Complaint Clusters
+
+Show cards for emerging civic problems.
+
+Example:
+
+CLUSTER #17
+
+Water Supply Failure
+
+Zone 4
+
+187 complaints
+
+Affected area:
+2.4 km²
+
+Priority:
+CRITICAL
+
+Trend:
+↑ 64% this week
+
+Create a cluster visualization.
+
+Show multiple complaint markers on a map converging into a cluster.
+
+Clicking a cluster opens:
+
+Total grievances
+Critical
+High
+Medium
+Categories
+Affected population
+Trend
+First reported
+Latest report
+
+Button:
+
+[View Cluster Grievances]
+
+---
+
+# 14. GEOGRAPHIC INTELLIGENCE — MAP SCREEN
+
+This is another REQUIRED major screen.
+
+Create a full geographic intelligence dashboard.
+
+Layout:
+
+LEFT:
+Large interactive map
+
+RIGHT:
+Filters and analytics
+
+Map must visually resemble a real civic GIS map.
+
+Use:
+
+roads
+localities
+district boundaries
+zones
+complaint markers
+cluster circles
+heatmap overlay
+
+Top map controls:
+
+Search location
+Current location
+Zoom
+Layers
+Heatmap
+Clusters
+Individual grievances
+
+Filters:
+
+Category
+Priority
+Status
+Department
+Date range
+SLA status
+
+Map modes:
+
+[Markers]
+
+[Heatmap]
+
+[Clusters]
+
+---
+
+# 15. HEATMAP MODE
+
+Create realistic colored geographic heat zones.
+
+Example:
+
+Zone 1 — Low
+
+Zone 2 — Moderate
+
+Zone 3 — High
+
+Zone 4 — Critical
+
+Zone 5 — Moderate
+
+Click Zone 4.
+
+Open side panel:
+
+ZONE 4
+
+Total grievances:
+438
+
+Critical:
+42
+
+High:
+97
+
+Water:
+173
+
+Roads:
+122
+
+Sanitation:
+81
+
+Trend:
+↑ 37%
+
+Affected population:
+18,420
+
+Add:
+
+[View Zone Grievances]
+
+---
+
+# 16. TREND DETECTION
+
+Create AI trend detection cards.
+
+Example:
+
+WATER COMPLAINTS
+
+Week 1:
+42
+
+Week 2:
+56
+
+Week 3:
+81
+
+Week 4:
+124
+
+AI warning:
+
+⚠ Emerging Water-Supply Hotspot
+
+Increase:
++195%
+
+Recommended action:
+
+"Inspect Sector 7 water infrastructure before complaint volume increases further."
+
+Clearly label:
+
+AI-generated recommendation
+Not an official government decision
+
+---
+
+# 17. AUTOMATIC DEPARTMENT ROUTING
+
+Within grievance detail show:
+
+AI Recommended Routing
+
+Department:
+Public Works Department
+
+Subdepartment:
+Road Maintenance
+
+Recommended Officer:
+Zone 4 Road Inspector
+
+Confidence:
+96%
+
+Actions:
+
+[Accept Routing]
+
+[Change Department]
+
+[Change Officer]
+
+---
+
+# 18. HUMAN-IN-THE-LOOP OVERRIDE
+
+Create an explicit AI vs Human decision component.
+
+Example:
+
+AI Recommendation:
+
+Priority:
+HIGH
+
+Department:
+PWD
+
+Officer Decision:
+
+Priority:
+CRITICAL
+
+Reason:
+
+"Additional safety risk verified during field inspection."
+
+Show:
+
+AI Decision
+Human Decision
+Reason
+Timestamp
+Officer
+
+Button:
+
+[Save Decision]
+
+Every override must visibly create an audit event.
+
+---
+
+# 19. SLA MONITORING
+
+Create dedicated SLA Monitoring screen.
+
+Dashboard cards:
+
+Within SLA
+Near Deadline
+Breached
+Average Resolution Time
+
+Table:
+
+Complaint ID
+Priority
+Department
+Officer
+SLA Deadline
+Remaining
+Status
+
+Use visual status:
+
+🟢 Within SLA
+
+🟠 Nearing Deadline
+
+🔴 Breached
+
+Create countdown indicators.
+
+Example:
+
+02h 14m remaining
+
+---
+
+# 20. ESCALATION MANAGEMENT
+
+Create escalation workflow.
+
+Visual hierarchy:
+
+Officer
+
+↓
+
+Department Head
+
+↓
+
+District Officer
+
+↓
+
+Higher Authority
+
+Show escalation reason:
+
+SLA exceeded
+
+Critical grievance
+
+Repeated complaints
+
+Create escalation cards with:
+
+Complaint
+Current officer
+Current authority
+Next authority
+Reason
+Time
+Status
+
+Actions:
+
+[Escalate]
+
+[View History]
+
+---
+
+# 21. AI COMPLAINT SUMMARY
+
+Every grievance detail page must have an AI Summary card.
+
+Example:
+
+ISSUE
+
+Major road damage near XYZ School.
+
+DURATION
+
+5 days
+
+AFFECTED
+
+Approximately 200 households
+
+RISK
+
+High pedestrian safety risk
+
+SIMILAR COMPLAINTS
+
+17
+
+RECOMMENDED DEPARTMENT
+
+PWD
+
+Use compact visual cards.
+
+---
+
+# 22. AI RESOLUTION ASSISTANCE
+
+Create an officer resolution assistant.
+
+Example grievance:
+
+Garbage accumulation near market.
+
+AI Suggested Action:
+
+1. Assign sanitation team
+2. Inspect location
+3. Remove accumulated waste
+4. Verify resolution with image
+5. Close complaint
+
+Buttons:
+
+[Use Suggested Workflow]
+
+[Edit Steps]
+
+Clearly label:
+
+AI recommendation only.
+
+---
+
+# 23. RESOLUTION VERIFICATION
+
+Create a dedicated officer screen.
+
+Header:
+
+Resolution Verification
+
+Show:
+
+BEFORE
+
+uploaded image
+
+AFTER
+
+uploaded image
+
+AI-assisted assessment:
+
+Location consistency ✓
+
+Issue appears addressed ✓
+
+Evidence quality ✓
+
+Confidence:
+87%
+
+Officer controls:
+
+[Confirm Resolution]
+
+[Request More Evidence]
+
+[Reject Evidence]
+
+Include note:
+
+"AI assists verification. Final resolution decision is made by authorized personnel."
+
+---
+
+# 24. OFFICER COMMUNICATION
+
+Add communication panel to grievance detail.
+
+Officer can:
+
+Request information
+Send response
+Attach documents
+Add internal note
+Transfer grievance
+Mention department
+Escalate
+
+Use separate visual distinction between:
+
+Citizen messages
+Officer messages
+Internal notes
+
+Internal notes must never appear in citizen view.
+
+---
+
+# 25. ADMIN DASHBOARD
+
+Keep the current admin dashboard.
+
+Add KPI cards:
+
+Total Grievances
+Active Cases
+SLA Compliance
+Resolution Rate
+Average Resolution
+Departments Active
+
+Add:
+
+Grievance Volume Overview
+Grievances by Category
+Department SLA Report
+AI Governance Insights
+Recent Administrative Activity
+
+But add prominent links to:
+
+[Geographic Intelligence]
+
+[Complaint Clusters]
+
+[AI Analytics]
+
+[Audit Logs]
+
+[Generate Report]
+
+---
+
+# 26. ADMIN — GEOGRAPHIC INTELLIGENCE
+
+Admin gets a larger GIS dashboard than officers.
+
+Include:
+
+Full-screen map
+
+Heatmap
+
+Complaint clusters
+
+Department boundaries
+
+Zone boundaries
+
+Critical complaint markers
+
+Trend overlays
+
+Right-side analytics panel:
+
+Total Complaints
+Critical Complaints
+Hotspots
+Emerging Trends
+Affected Population
+
+---
+
+# 27. ADMIN — AI ANALYTICS
+
+Create a dedicated AI Governance dashboard.
+
+Cards:
+
+AI Classification Accuracy
+
+Duplicate Detection Accuracy
+
+Average AI Confidence
+
+AI Overrides
+
+Human Acceptance Rate
+
+AI-assisted Resolutions
+
+Show charts:
+
+AI Confidence Distribution
+
+AI vs Human Decisions
+
+Classification Accuracy
+
+Duplicate Detection
+
+Priority Score Distribution
+
+---
+
+# 28. ADMIN — AUDIT LOG
+
+Create detailed audit log.
+
+Every important action must appear.
+
+Example:
+
+Complaint Created
+↓
+AI Classified
+↓
+Priority Generated
+↓
+Department Assigned
+↓
+Officer Accepted
+↓
+Officer Changed Priority
+↓
+Resolution Submitted
+↓
+Citizen Feedback
+
+Each event displays:
+
+WHO
+WHAT
+WHEN
+WHY
+
+Example:
+
+Officer Rajesh Kumar
+
+Changed Priority
+
+HIGH → CRITICAL
+
+Reason:
+"Safety risk verified"
+
+21 Aug 2026
+10:42 AM
+
+---
+
+# 29. ADMIN — DEPARTMENT MANAGEMENT
+
+Create department management page.
+
+Table:
+
+Department
+Open Cases
+Resolved
+SLA Compliance
+Avg Resolution
+Critical
+Assigned Officers
+
+Example:
+
+Public Works Department
+42
+187
+89.2%
+4.1 days
+8
+24 officers
+
+Allow:
+
+[View Department]
+
+[Configure SLA]
+
+[Manage Officers]
+
+---
+
+# 30. ADMIN — REPORTS
+
+Create report generation interface.
+
+Report types:
+
+Grievance Report
+Department Performance
+SLA Report
+Geographic Report
+AI Performance Report
+Audit Report
+
+Filters:
+
+Date
+Department
+Category
+Zone
+Priority
+Status
+
+Buttons:
+
+[Generate Report]
+
+[Export CSV]
+
+[Export PDF]
+
+---
+
+# 31. ALL GRIEVANCES SCREEN
+
+Create a powerful universal grievance table.
+
+Columns:
+
+ID
+Title
+Category
+Priority
+AI Score
+Department
+Officer
+Location
+Status
+SLA
+Duplicate
+Created
+Action
+
+Filters:
+
+Search
+Priority
+Category
+Department
+Officer
+Zone
+SLA
+Status
+AI Confidence
+Duplicate Status
+Date
+
+Use advanced filtering chips.
+
+---
+
+# 32. RESPONSIVE DESIGN
+
+Design desktop-first at approximately 1440px width.
+
+Also create responsive behavior for:
+
+1280px
+1024px
+768px
+mobile
+
+On smaller screens:
+
+* sidebar collapses
+* maps remain usable
+* tables become cards
+* filters become bottom sheets
+* KPI cards become horizontally scrollable
+* grievance detail becomes stacked
+* AI panels remain clearly visible
+
+---
+
+# 33. DESIGN SYSTEM
+
+Maintain the existing Nivara visual language.
+
+Primary:
+Government navy / deep blue
+
+Secondary:
+Clean civic blue
+
+Status:
+
+Green = success / within SLA
+Orange = warning / nearing SLA
+Red = critical / breached
+Purple = AI / intelligence
+Blue = information
+
+Use colors consistently.
+
+AI components should have a subtle blue/purple intelligence treatment but must never look like an unrelated chatbot.
+
+Cards:
+12–16px radius
+
+Borders:
+Subtle
+
+Shadows:
+Very light
+
+Typography:
+Clean modern sans-serif
+
+Keep information density high enough for government operators without making the interface cluttered.
+
+---
+
+# 34. IMPORTANT AI UX RULES
+
+AI must NEVER look like it is making an unquestionable government decision.
+
+Every AI recommendation must contain a small label such as:
+
+"AI recommendation"
+
+"AI-assisted insight"
+
+"AI-generated summary"
+
+"Not an official government decision"
+
+Where appropriate provide:
+
+[Accept]
+
+[Edit]
+
+[Override]
+
+[Reject]
+
+This establishes human-in-the-loop governance.
+
+---
+
+# 35. IMPORTANT MAP UX RULES
+
+Maps are NOT optional decorative cards.
+
+Maps must be functional-looking product screens.
+
+Use realistic GIS styling with:
+
+* roads
+* streets
+* localities
+* boundaries
+* markers
+* clusters
+* heat zones
+* map controls
+* legend
+* filters
+* selected-location panel
+* popup information
+
+Create at least these map states:
+
+1. Citizen location picker
+2. Officer grievance map
+3. Officer cluster map
+4. Admin heatmap
+5. Admin geographic intelligence dashboard
+
+---
+
+# 36. IMPORTANT INTERACTION FLOWS
+
+Create clickable prototype connections for these primary journeys:
+
+## Citizen
+
+Dashboard
+→ Submit Grievance
+→ Voice/Text Input
+→ AI Analysis
+→ Location Map
+→ Evidence Upload
+→ Review
+→ Submit
+→ Complaint Detail
+→ Timeline
+→ Resolution
+→ Feedback
+
+## Officer
+
+Dashboard
+→ Priority Queue
+→ Grievance Detail
+→ AI Priority Explanation
+→ Duplicate Detection
+→ Map Location
+→ SLA
+→ AI Resolution Assistance
+→ Resolution Verification
+→ Resolve
+
+## Admin
+
+Dashboard
+→ Geographic Intelligence
+→ Heatmap
+→ Zone
+→ Complaint Cluster
+→ Cluster Details
+→ Trend Analysis
+
+Also:
+
+Admin
+→ Audit Logs
+→ AI Decision
+→ Human Override
+→ Reason
+→ Timestamp
+
+---
+
+# 37. FINAL PRODUCT GOAL
+
+The final Figma project should NOT consist only of three dashboards.
+
+It should represent a complete civic grievance platform with approximately these major areas:
+
+CITIZEN
+
+* Dashboard
+* Submit grievance
+* Voice/multilingual filing
+* Location map
+* Evidence upload
+* Grievance detail
+* Timeline
+* Communication
+* Resolution
+* Feedback
+
+OFFICER
+
+* Dashboard
+* AI priority queue
+* Grievance detail
+* AI classification
+* Explainable priority scoring
+* Duplicate detection
+* Complaint clusters
+* Geographic intelligence
+* SLA monitoring
+* Escalations
+* AI summary
+* Resolution assistance
+* Resolution verification
+* Communication
+
+ADMIN
+
+* Dashboard
+* All grievances
+* Departments
+* Officers
+* Geographic intelligence
+* Heatmap
+* Complaint clusters
+* Trend detection
+* AI analytics
+* SLA management
+* Escalations
+* Reports
+* Audit logs
+* Governance
+
+Do not remove the existing dashboard screens.
+
+Instead, **extend the existing Nivara design system into this complete product ecosystem.**
+
+The most visually important differentiators must be:
+
+1. Explainable AI priority scoring
+2. Semantic duplicate detection
+3. Complaint clustering
+4. Geographic heatmap intelligence
+5. AI-powered priority queue
+6. SLA-aware escalation
+7. Human-in-the-loop AI override
+8. AI-assisted resolution verification
+
+Make these features visually prominent enough that a hackathon evaluator immediately understands what makes Nivara different from a normal grievance portal.

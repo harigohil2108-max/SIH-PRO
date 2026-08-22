@@ -1,0 +1,565 @@
+Absolutely. Since you want to stick closely to the provided template screenshot and create three separate role landing/dashboard pages, don't let Figma redesign the visual language.
+
+Use this as one master Figma prompt:
+
+Use the provided dashboard template screenshot(s) as the PRIMARY visual reference.
+
+Create a complete UI design for a civic-tech grievance platform called Nivara — AI-Powered Citizen Grievance Platform.
+
+MOST IMPORTANT DESIGN RULE
+
+DO NOT redesign the template from scratch.
+
+Preserve the reference template's visual structure and interaction patterns as closely as possible:
+
+- same overall dashboard layout
+- same sidebar proportions and positioning
+- same top navigation structure
+- same hamburger/collapse behavior
+- same card proportions and visual hierarchy
+- same table style
+- same chart-in-card pattern
+- same spacing rhythm
+- same typography hierarchy
+- same border radius language
+- same dropdown style
+- same button hierarchy
+- same responsive layout philosophy
+- same light/dark mode concept
+
+The reference screenshot is the design foundation.
+
+Only adapt its content, colors, labels, icons, data visualization and navigation to Nivara.
+
+Do NOT introduce:
+
+- glassmorphism
+- crypto/gaming aesthetics
+- excessive gradients
+- neon colors
+- huge decorative illustrations
+- unnecessary animations
+- radically different layouts
+
+The result should feel like the SAME PRODUCT TEMPLATE transformed into a polished government-grade civic platform.
+
+---
+
+Nivara Visual Direction
+
+Product name:
+
+Nivara
+
+Subtitle:
+
+AI-Powered Citizen Grievance Platform
+
+Tagline:
+
+Your Voice. Our Responsibility.
+
+Visual personality:
+
+- trustworthy
+- government-grade
+- professional
+- modern
+- accessible
+- clean
+- information-dense but not cluttered
+
+Color direction:
+
+- navy / government blue as primary
+- white and neutral surfaces
+- subtle gray borders
+- restrained blue accents
+- restrained semantic colors for status and priority
+- excellent contrast
+- professional light and dark themes
+
+Keep the reference template's overall visual character while applying this civic-tech palette.
+
+---
+
+CREATE THREE ROLE LANDING/DASHBOARD PAGES
+
+Create THREE separate role-specific dashboard landing pages using the SAME shared design system.
+
+They should look like three areas of the SAME Nivara platform.
+
+Create:
+
+1. Citizen Dashboard
+2. Officer Dashboard
+3. Admin Dashboard
+
+All three must reuse the same:
+
+- sidebar
+- topbar
+- cards
+- tables
+- buttons
+- badges
+- charts
+- typography
+- spacing
+- design tokens
+- light/dark theme
+
+Only their navigation, KPIs, information and actions should differ.
+
+---
+
+1. CITIZEN DASHBOARD
+
+Page title:
+
+Citizen Dashboard
+
+Welcome message:
+
+Welcome back, Citizen
+
+Sidebar sections:
+
+Overview
+
+- Dashboard
+- My Grievances
+- Submit Grievance
+- Notifications
+
+Support
+
+- Help & Support
+
+Account
+
+- Profile
+- Settings
+
+Topbar:
+
+- hamburger menu
+- Nivara branding
+- breadcrumb
+- global search
+- theme toggle
+- notification bell
+- citizen profile/avatar dropdown
+
+Main dashboard:
+
+KPI cards
+
+- Total Grievances
+- Pending
+- In Progress
+- Resolved
+
+Each card should follow the exact card style of the reference template.
+
+Main analytics section
+
+Create:
+
+Grievance Status Trend
+
+Use a line/area chart inside the same type of chart card used by the reference template.
+
+Create:
+
+Grievances by Category
+
+Use a donut/pie chart.
+
+Categories:
+
+- Roads
+- Water Supply
+- Electricity
+- Sanitation
+- Waste Management
+- Street Lighting
+
+Recent Grievances
+
+Create a table using the reference template's table design.
+
+Columns:
+
+- Grievance ID
+- Title
+- Category
+- Status
+- Priority
+- Date
+- Action
+
+Example records:
+
+NV-1024 — Pothole near Main Gate — Roads — In Progress — High
+
+NV-1023 — Irregular Water Supply — Water — Submitted — Medium
+
+NV-1022 — Street Light Not Working — Street Lighting — Resolved — Low
+
+Activity section
+
+Create a timeline showing:
+
+Submitted → AI Analyzed → Assigned → Officer Assigned → Resolved
+
+AI insight card
+
+Add a subtle card:
+
+AI-Assisted Insight
+
+Example:
+
+"Your grievance has been assigned to the Public Works Department. The current expected next step is field verification."
+
+Clearly label this as AI-assisted and non-authoritative.
+
+---
+
+2. OFFICER DASHBOARD
+
+Create a second dashboard using EXACTLY the same visual system.
+
+Page title:
+
+Officer Dashboard
+
+Welcome:
+
+Welcome back, Officer
+
+Sidebar:
+
+Overview
+
+- Dashboard
+- Priority Queue
+- My Assignments
+- All Grievances
+
+Operations
+
+- SLA Monitoring
+- Escalations
+- Analytics
+
+Account
+
+- Profile
+- Settings
+
+Topbar remains structurally identical to Citizen.
+
+Main dashboard:
+
+KPI cards
+
+- Assigned to Me
+- High Priority
+- Due Today
+- Resolved
+
+Priority Queue
+
+Create a prominent table/card showing:
+
+- Grievance ID
+- Complaint
+- Category
+- Priority
+- SLA
+- Status
+- Assigned Date
+- Action
+
+Use restrained priority colors:
+
+Critical → red
+
+High → amber
+
+Medium → blue
+
+Low → gray/green
+
+SLA Performance
+
+Create a chart card showing:
+
+- Within SLA
+- Near SLA
+- Breached
+
+Grievance Trends
+
+Create a line/bar chart showing grievance volume over time.
+
+Recent Activity
+
+Officer activity timeline:
+
+- New grievance assigned
+- Priority updated
+- Citizen responded
+- Resolution submitted
+- SLA warning
+
+AI-assisted recommendation
+
+Add:
+
+AI Recommendation
+
+Example:
+
+"3 high-priority grievances have similar issue patterns and may be suitable for coordinated field inspection."
+
+Make it clear that AI provides recommendations, not official decisions.
+
+---
+
+3. ADMIN DASHBOARD
+
+Create a third dashboard using the SAME Nivara design system.
+
+Page title:
+
+Admin Dashboard
+
+Welcome:
+
+Welcome back, Administrator
+
+Sidebar:
+
+Overview
+
+- Dashboard
+- All Grievances
+- Analytics
+
+Management
+
+- Departments
+- Officers
+- Citizens
+- AI Insights
+- SLA Management
+- Audit Logs
+
+Account
+
+- Settings
+
+Main dashboard:
+
+KPI cards
+
+- Total Grievances
+- Active Cases
+- SLA Compliance
+- Resolution Rate
+
+Grievance Overview
+
+Create a large chart card showing grievance volume over time.
+
+Department Performance
+
+Create a table/chart containing:
+
+- Department
+- Open Cases
+- Resolved
+- SLA Compliance
+- Avg. Resolution Time
+
+Example departments:
+
+- Public Works
+- Water Supply
+- Electricity
+- Sanitation
+- Transport
+
+Geographic / Category Overview
+
+Create a visualization area representing grievance concentration by category/region.
+
+It can be a clean map-style placeholder if an actual map is not practical.
+
+AI Insights
+
+Create a card:
+
+AI-Assisted Governance Insights
+
+Example:
+
+"Road-related grievances increased 18% this month in the selected region."
+
+Add:
+
+AI-Assisted Analysis
+
+Do not present AI outputs as authoritative government decisions.
+
+Recent Administrative Activity
+
+Show:
+
+- Department reassignment
+- Officer assignment
+- SLA escalation
+- Grievance status update
+- Audit event
+
+---
+
+SHARED COMPONENTS
+
+Create reusable components/components in Figma rather than designing every element independently.
+
+Create components for:
+
+- Sidebar
+- Collapsed Sidebar
+- Mobile Sidebar Drawer
+- Topbar
+- Hamburger button
+- Breadcrumb
+- Search
+- Notification dropdown
+- Profile dropdown
+- Theme toggle
+- KPI card
+- Chart card
+- Data table
+- Status badge
+- Priority badge
+- AI-assisted badge
+- Buttons
+- Tabs
+- Dropdowns
+- Pagination
+- Empty state
+- Activity timeline
+
+Use variants where appropriate.
+
+---
+
+STATUS SYSTEM
+
+Use these statuses consistently across the three dashboards:
+
+- Submitted
+- AI Analyzed
+- Assigned
+- In Progress
+- Waiting for Citizen
+- Resolved
+- Reopened
+- Escalated
+- Closed
+
+Create consistent status badge components with icon + text.
+
+---
+
+PRIORITY SYSTEM
+
+Use:
+
+- Low
+- Medium
+- High
+- Critical
+
+Keep colors restrained and professional.
+
+Critical = red
+
+High = amber
+
+Medium = blue
+
+Low = neutral/green
+
+---
+
+RESPONSIVE DESIGN
+
+For each role, design:
+
+Desktop
+
+Follow the reference template closely.
+
+Tablet
+
+Adapt the same layout without changing the design language.
+
+Mobile
+
+Use the reference template's hamburger/drawer concept.
+
+Sidebar becomes a mobile drawer.
+
+Cards stack vertically.
+
+Tables become horizontally scrollable or transform into compact responsive rows.
+
+Charts remain readable.
+
+Do NOT invent a completely different mobile design.
+
+---
+
+LIGHT AND DARK MODE
+
+Create both:
+
+- Light mode
+- Dark mode
+
+Preserve the reference template's theme-switching behavior and visual hierarchy.
+
+Dark mode must remain professional and readable.
+
+---
+
+IMPORTANT
+
+The three dashboards should NOT look like three different products.
+
+They should clearly belong to the same platform.
+
+Think:
+
+ONE NIVARA DESIGN SYSTEM
+
+↓
+
+Citizen Experience
+
+Officer Workspace
+
+Admin Command Center
+
+Use the reference screenshot as the visual anchor throughout the entire design.
+
+Prioritize consistency, usability, information hierarchy and realistic government dashboard UX over decorative visuals.
+
+Create the actual editable Figma screens and reusable components rather than only describing the design.
