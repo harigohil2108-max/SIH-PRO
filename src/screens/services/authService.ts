@@ -20,6 +20,33 @@ export async function login(email: string, password: string) {
 
   return data;
 }
+export async function register(
+  name: string,
+  email: string,
+  phone: string,
+  password: string
+) {
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name,
+      email,
+      phone,
+      password,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Registration failed");
+  }
+
+  return data;
+}
 
 export async function getCurrentUser() {
   const token = localStorage.getItem("token");
