@@ -242,12 +242,19 @@ function PlaceholderScreen({ title }: { title: string }) {
 
 // ─── Screen Router ────────────────────────────────────────────────────────────
 function renderScreen(role: Role, screen: string, navigate: (s: string) => void) {
+  const [currentScreen, grievanceId] = screen.split(":");
   if (role === "citizen") {
-    switch (screen) {
+    switch (currentScreen) {
       case "dashboard":       return <CitizenDashboard navigate={navigate} />;
       case "my-grievances":   return <MyGrievances navigate={navigate} />;
       case "submit-grievance":return <SubmitGrievance navigate={navigate} />;
-      case "grievance-detail":return <GrievanceDetail navigate={navigate} />;
+      case "grievance-detail":
+  return (
+    <GrievanceDetail
+      navigate={navigate}
+      grievanceId={grievanceId}
+    />
+  );
       case "notifications":   return <CitizenNotifications />;
       default: return <PlaceholderScreen title={screen.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())} />;
     }

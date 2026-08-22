@@ -7,7 +7,10 @@ import {
 import MapSvg from "../components/MapSvg";
 import {
   getMyGrievances,
+  getGrievanceById,
   createGrievance,
+  submitFeedback,
+  reopenGrievance,
 } from "./services/grievanceService";
 
 const trendData = [
@@ -290,7 +293,7 @@ export function MyGrievances({
       <tr
         key={r._id}
         className="hover:bg-slate-50 cursor-pointer"
-        onClick={() => navigate("grievance-detail")}
+        onClick={() => navigate(`grievance-detail:${r._id}`)}
       >
         <td className="py-3 pr-3 font-mono text-xs text-blue-600 font-semibold">
           {r.grievanceId}
@@ -778,9 +781,57 @@ const handleSubmit = async () => {
 }
 
 // ─── Grievance Detail ─────────────────────────────────────────────────────────
-export function GrievanceDetail({ navigate }: { navigate: (screen: string) => void }) {
+export function GrievanceDetail({
+  navigate,
+  grievanceId,
+}: {
+  navigate: (screen: string) => void;
+  grievanceId?: string;
+}) {
   const [tab, setTab] = useState<"overview" | "communication" | "resolution">("overview");
   const [message, setMessage] = useState("");
+  const [rating, setRating] = useState(0);
+const [feedback, setFeedback] = useState("");
+const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [grievance, setGrievance] = useState<any>(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+useEffect(() => {
+  const fetchGrievance = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !grievanceId) {
+      setError("Unable to load grievance");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await getGrievanceById(token, grievanceId);
+
+      setGrievance(data.grievance || data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load grievance"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchGrievance();
+}, [grievanceId]);
+
+if (loading) {
+  return <div className="p-6">Loading grievance...</div>;
+}
+
+if (error) {
+  return <div className="p-6 text-red-600">{error}</div>;
+}
 
   return (
     <div className="p-6 space-y-5">
@@ -790,11 +841,19 @@ export function GrievanceDetail({ navigate }: { navigate: (screen: string) => vo
           <button onClick={() => navigate("my-grievances")} className="mt-1 text-slate-400 hover:text-slate-700 text-sm">← Back</button>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">NV-1024 — Pothole near Main Gate</h1>
-              <StatusBadge status="In Progress" />
-              <PriorityBadge priority="High" />
+              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+  {grievance.grievanceId} — {grievance.title}
+</h1>
+
+<StatusBadge status={grievance.status} />
+
+<PriorityBadge priority={grievance.priority} />
             </div>
-            <p className="text-xs text-slate-500 mt-1">Category: Roads • Submitted Aug 15, 2026 • Zone 4</p>
+           <p className="text-xs text-slate-500 mt-1">
+  Category: {grievance.category} • Submitted{" "}
+  {new Date(grievance.createdAt).toLocaleDateString()} •{" "}
+  {grievance.location?.city || "Location not specified"}
+</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -818,26 +877,27 @@ export function GrievanceDetail({ navigate }: { navigate: (screen: string) => vo
             {/* AI Summary */}
             <AiInsightCard
               title="AI-Generated Complaint Summary"
-              text="Major road damage near XYZ School. Reported for 5 days and potentially affecting approximately 200 households. High pedestrian safety risk identified."
+              text={grievance.aiSummary || grievance.description || "No summary available."}
               disclaimer="AI-generated summary • Verify with official records"
             />
 
             {/* Location Map */}
-            <SectionCard title="Complaint Location" subtitle="Main Gate Road, Sector 7 — Lat: 21.2514, Lon: 81.6296">
+            <SectionCard title="Complaint Location" subtitle={
+  grievance.location?.address ||
+  grievance.location?.city ||
+  "Location not specified"
+}>
               <MapSvg mode="markers" height={240} showLocationPicker={true} />
             </SectionCard>
 
             {/* Timeline */}
             <SectionCard title="Complaint Timeline">
-              <Timeline steps={[
-                { label: "Submitted", desc: "Citizen filed pothole grievance", time: "Aug 15, 09:30 AM", done: true, actor: "Priya Sharma" },
-                { label: "AI Analyzed", desc: "Classified Roads > Pothole — Confidence 94%", time: "Aug 15, 09:31 AM", done: true, actor: "Nivara AI" },
-                { label: "Department Assigned", desc: "Routed to Public Works Department", time: "Aug 15, 10:00 AM", done: true, actor: "System" },
-                { label: "Officer Assigned", desc: "Assigned to Rajesh Kumar, Zone 4 Inspector", time: "Aug 16, 09:00 AM", done: true, actor: "Officer Mgr." },
-                { label: "Field Verification", desc: "Officer scheduled site visit", time: "Aug 18, 02:00 PM", done: false },
-                { label: "Resolution", desc: "Awaiting repair completion", time: "Pending", done: false },
-                { label: "Citizen Confirmation", desc: "You will be notified to confirm", time: "Pending", done: false },
-              ]} />
+              <Timeline steps={grievance.timeline.map((item: any) => ({
+  label: item.status.replace(/_/g, " "),
+  desc: item.message,
+  time: new Date(item.timestamp).toLocaleString(),
+  done: true,
+}))} />
             </SectionCard>
           </div>
 
@@ -845,31 +905,53 @@ export function GrievanceDetail({ navigate }: { navigate: (screen: string) => vo
             {/* SLA */}
             <SectionCard title="SLA Status">
               <div className="space-y-3 text-sm">
-                <div><p className="text-xs text-slate-400 dark:text-slate-500">Deadline</p><p className="font-semibold text-slate-800 dark:text-slate-200">21 Aug, 10:32 AM</p></div>
-                <div><p className="text-xs text-slate-400 dark:text-slate-500">Remaining</p>
-                  <p className="font-bold text-green-600 text-lg">08h 42m</p>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 rounded-full" style={{ width: "65%" }} />
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-green-700">
-                  ● Within SLA
-                </div>
-              </div>
+  <div>
+    <p className="text-xs text-slate-400 dark:text-slate-500">
+      Status
+    </p>
+    <p
+      className={`font-semibold ${
+        grievance.sla?.breached
+          ? "text-red-600"
+          : "text-green-600"
+      }`}
+    >
+      {grievance.sla?.breached ? "SLA Breached" : "Within SLA"}
+    </p>
+  </div>
+
+  <div>
+    <p className="text-xs text-slate-400 dark:text-slate-500">
+      Escalation
+    </p>
+    <p className="font-semibold text-slate-800 dark:text-slate-200">
+      {grievance.sla?.escalated ? "Escalated" : "Not escalated"}
+    </p>
+  </div>
+</div>
             </SectionCard>
 
             {/* Assigned */}
             <SectionCard title="Assigned Department">
               <div className="space-y-2 text-sm">
-                <div><p className="text-xs text-slate-400 dark:text-slate-500">Department</p><p className="font-semibold text-slate-800 dark:text-slate-200">Public Works Department</p></div>
-                <div><p className="text-xs text-slate-400 dark:text-slate-500">Officer</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">RK</div>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">Rajesh Kumar</span>
-                  </div>
-                </div>
-                <div><p className="text-xs text-slate-400 dark:text-slate-500">Contact</p><p className="text-blue-600 text-xs">Send Message</p></div>
-              </div>
+  <div>
+    <p className="text-xs text-slate-400 dark:text-slate-500">
+      Department
+    </p>
+    <p className="font-semibold text-slate-800 dark:text-slate-200">
+      {grievance.department?.name || "Not assigned yet"}
+    </p>
+  </div>
+
+  <div>
+    <p className="text-xs text-slate-400 dark:text-slate-500">
+      Officer
+    </p>
+    <p className="font-semibold text-slate-800 dark:text-slate-200">
+      {grievance.assignedOfficer?.name || "Not assigned yet"}
+    </p>
+  </div>
+</div>
             </SectionCard>
 
             {/* Resolution actions */}
@@ -933,18 +1015,28 @@ export function GrievanceDetail({ navigate }: { navigate: (screen: string) => vo
           <div className="col-span-2 space-y-4">
             <SectionCard title="Resolution Evidence">
               <div className="grid grid-cols-2 gap-4 mb-4">
-                {["Before", "After"].map(label => (
-                  <div key={label}>
-                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">{label}</p>
-                    <div className="bg-slate-100 rounded-xl h-40 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-700">
-                      {label === "After" ? "📸 Awaiting upload" : "🖼 pothole_main_gate.jpg"}
-                    </div>
-                  </div>
-                ))}
-              </div>
+  {grievance.resolution?.evidence?.length > 0 ? (
+    grievance.resolution.evidence.map((item: string, index: number) => (
+      <div key={index}>
+        <p className="text-xs font-semibold text-slate-500 uppercase mb-2">
+          Evidence {index + 1}
+        </p>
+        <div className="bg-slate-100 rounded-xl h-40 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-700">
+          {item}
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="col-span-2 bg-slate-100 rounded-xl h-40 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-700">
+      No resolution evidence uploaded yet.
+    </div>
+  )}
+</div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Officer Resolution Note</p>
-                <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">Field inspection confirmed pothole at coordinates. Repair team dispatched. Work in progress.</p>
+                <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">
+  {grievance.resolution?.note || "No resolution note available yet."}
+</p>
               </div>
             </SectionCard>
 
@@ -961,7 +1053,42 @@ export function GrievanceDetail({ navigate }: { navigate: (screen: string) => vo
             <div className="flex gap-3">
               <PrimaryBtn className="flex-1 justify-center">Accept Resolution</PrimaryBtn>
               <SecondaryBtn className="flex-1 justify-center">Reject Resolution</SecondaryBtn>
-              <button className="flex-1 px-4 py-2 text-sm font-medium border border-amber-300 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100">Reopen</button>
+              <button
+  className="flex-1 px-4 py-2 text-sm font-medium border border-amber-300 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100"
+  onClick={async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !grievanceId) {
+      alert("Unable to reopen grievance.");
+      return;
+    }
+
+    const reason = window.prompt(
+      "Why do you want to reopen this grievance?"
+    );
+
+    if (reason === null) {
+      return;
+    }
+
+    try {
+      await reopenGrievance(token, grievanceId, reason);
+
+      alert("Grievance reopened successfully.");
+
+      const data = await getGrievanceById(token, grievanceId);
+      setGrievance(data.grievance || data);
+    } catch (err) {
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Failed to reopen grievance."
+      );
+    }
+  }}
+>
+  Reopen
+</button>
             </div>
           </div>
 
@@ -969,10 +1096,65 @@ export function GrievanceDetail({ navigate }: { navigate: (screen: string) => vo
             <SectionCard title="Rate Resolution">
               <p className="text-xs text-slate-500 mb-3">How satisfied are you with the resolution?</p>
               <div className="flex gap-2 justify-center text-3xl mb-3">
-                {[1,2,3,4,5].map(s => <button key={s} className="hover:scale-125 transition-transform">{"★"}</button>)}
+               {[1, 2, 3, 4, 5].map(s => (
+  <button
+    key={s}
+    onClick={() => setRating(s)}
+    className={`hover:scale-125 transition-transform ${
+      s <= rating ? "text-yellow-500" : "text-slate-300"
+    }`}
+  >
+    {"★"}
+  </button>
+))}
               </div>
-              <textarea rows={3} placeholder="Share your feedback..." className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm resize-none outline-none focus:border-blue-400" />
-              <PrimaryBtn className="w-full mt-3 justify-center">Submit Feedback</PrimaryBtn>
+              <textarea rows={3}
+  value={feedback}
+  onChange={(e) => setFeedback(e.target.value)} placeholder="Share your feedback..." className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm resize-none outline-none focus:border-blue-400" />
+              <PrimaryBtn
+  className="w-full mt-3 justify-center"
+  onClick={async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !grievanceId) {
+      setFeedbackMessage("Unable to submit feedback.");
+      return;
+    }
+
+    if (!rating) {
+      setFeedbackMessage("Please select a rating.");
+      return;
+    }
+
+    try {
+      setFeedbackSubmitting(true);
+      setFeedbackMessage("");
+
+      await submitFeedback(
+        token,
+        grievanceId,
+        rating,
+        feedback
+      );
+
+      setFeedbackMessage("Feedback submitted successfully.");
+    } catch (err) {
+      setFeedbackMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to submit feedback."
+      );
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  }}
+>
+  {feedbackSubmitting ? "Submitting..." : "Submit Feedback"}
+</PrimaryBtn>{feedbackMessage && (
+  <p className="text-xs text-slate-500 mt-2">
+    {feedbackMessage}
+  </p>
+)}
             </SectionCard>
           </div>
         </div>
