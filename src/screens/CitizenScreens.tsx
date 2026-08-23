@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
@@ -360,74 +360,154 @@ const [submitError, setSubmitError] = useState("");
 const [aiRecommendation, setAiRecommendation] = useState<any>(null);
 const [aiAnalyzing, setAiAnalyzing] = useState(false);
 const [duplicateMatches, setDuplicateMatches] = useState<any[]>([]);
-const handleAIAnalysis = async () => {
-  if (!text.trim()) {
-    setSubmitError("Please enter your grievance description first.");
+const [aiAnalysisError, setAiAnalysisError] = useState("");
+const aiAbortController = useRef<AbortController | null>(null);
+const aiRequestId = useRef(0);
+
+const runAIAnalysis = async (finalAnalysis = false) => {
+  const description = text.trim();
+
+  if (!description) {
+    setAiRecommendation(null);
+    setDuplicateMatches([]);
     return;
   }
+
+  if (typeof document !== "undefined" && document.hidden) return;
 
   const token = localStorage.getItem("token");
-
   if (!token) {
-    setSubmitError("Please login again.");
+    setAiAnalysisError("Please login again.");
     return;
   }
+
+  aiAbortController.current?.abort();
+  const controller = new AbortController();
+  aiAbortController.current = controller;
+  const requestId = ++aiRequestId.current;
 
   try {
     setAiAnalyzing(true);
-    setSubmitError("");
-    setDuplicateMatches([]);
+    setAiAnalysisError("");
 
-    const title = text.trim().slice(0, 80);
-    const description = text.trim();
+    const title = description.slice(0, 80);
 
-    // 1. AI grievance analysis
-    const result = await analyzeGrievance(token, {
-      title,
-      description,
-    });
+    const result = await analyzeGrievance(
+      token,
+      { title, description },
+      controller.signal
+    );
 
-    setAiRecommendation(result.aiAnalysis);
+    if (
+      controller.signal.aborted ||
+      requestId !== aiRequestId.current ||
+      document.hidden
+    ) return;
 
-    // 2. Check for duplicate grievances
+    setAiRecommendation(result.aiAnalysis || null);
+
     try {
-  const duplicateResult = await checkDuplicateGrievances(token, {
-    title,
-    description,
-    category: result.aiAnalysis?.category,
-    subcategory: result.aiAnalysis?.subcategory,
-    location: {
-      address: "",
-      city: "",
-      state: "",
-    },
-  });
+      const duplicateResult = await checkDuplicateGrievances(
+        token,
+        {
+          title,
+          description,
+          category: result.aiAnalysis?.category,
+          subcategory: result.aiAnalysis?.subcategory,
+          location: {
+            address: "Main Gate Road, Sector 7",
+            city: "Raipur",
+            state: "Chhattisgarh",
+          },
+        },
+        controller.signal
+      );
 
-  setDuplicateMatches(
-    duplicateResult.hasDuplicates
-      ? duplicateResult.duplicateMatches || []
-      : []
-  );
-} catch (duplicateError) {
-  console.error("Duplicate check error:", duplicateError);
-  setDuplicateMatches([]);
-}
+      if (
+        controller.signal.aborted ||
+        requestId !== aiRequestId.current ||
+        document.hidden
+      ) return;
+
+      setDuplicateMatches(
+        duplicateResult.hasDuplicates
+          ? duplicateResult.duplicateMatches || []
+          : []
+      );
+    } catch (duplicateError) {
+      if (!controller.signal.aborted) {
+        console.error("Duplicate check error:", duplicateError);
+        setDuplicateMatches([]);
+      }
+    }
   } catch (error) {
-    console.error("AI analysis error:", error);
+    if (controller.signal.aborted) return;
 
-    setSubmitError(
-      error instanceof Error
-        ? error.message
-        : "Failed to analyze grievance"
+    console.error("AI analysis error:", error);
+    setAiAnalysisError(
+      error instanceof Error ? error.message : "Failed to analyze grievance"
     );
   } finally {
-    setAiAnalyzing(false);
+    if (requestId === aiRequestId.current) {
+      setAiAnalyzing(false);
+    }
   }
 };
+
+// Live AI analysis: start shortly after the citizen begins typing,
+// restart for meaningful changes, and cancel while the tab is hidden.
+useEffect(() => {
+  if (!text.trim()) {
+    aiAbortController.current?.abort();
+    setAiRecommendation(null);
+    setDuplicateMatches([]);
+    setAiAnalyzing(false);
+    return;
+  }
+
+  if (typeof document !== "undefined" && document.hidden) return;
+
+  const timer = window.setTimeout(() => {
+    void runAIAnalysis();
+  }, 900);
+
+  return () => {
+    window.clearTimeout(timer);
+    aiAbortController.current?.abort();
+    aiRequestId.current += 1;
+  };
+}, [text]);
+
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      aiAbortController.current?.abort();
+      aiRequestId.current += 1;
+      setAiAnalyzing(false);
+    } else if (text.trim()) {
+      void runAIAnalysis();
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    aiAbortController.current?.abort();
+  };
+}, [text]);
+
 const handleSubmit = async () => {
   try {
     setSubmitting(true);
     setSubmitError("");
+
+    // Always perform one final analysis using the exact latest complaint
+    // before creating the grievance. This makes submission the final
+    // completion point for the AI analysis.
+    if (text.trim()) {
+      await runAIAnalysis(true);
+    }
 
     const token = localStorage.getItem("token");
 
@@ -562,22 +642,40 @@ aiAnalysis: aiRecommendation || undefined,
 
               <div className="space-y-2">
                 {[
-                  { label: "Category", value: "Roads", conf: null },
-                  { label: "Subcategory", value: "Pothole", conf: null },
-                  { label: "AI Confidence", value: "94%", conf: 94 },
-                  { label: "Issue Duration", value: "~5 days", conf: null },
-                  { label: "Urgency", value: "High", conf: null },
-                  { label: "Affected People", value: "~200 households", conf: null },
-                ].map(({ label, value, conf }) => (
+                  { label: "Category", value: aiRecommendation?.category || "Analyzing..." },
+                  { label: "Subcategory", value: aiRecommendation?.subcategory || "Analyzing..." },
+                  {
+                    label: "AI Confidence",
+                    value: aiRecommendation?.confidence != null
+                      ? `${Math.round(aiRecommendation.confidence * 100)}%`
+                      : "Analyzing...",
+                  },
+                  {
+                    label: "Priority Score",
+                    value: aiRecommendation?.priorityScore != null
+                      ? `${aiRecommendation.priorityScore} / 100`
+                      : "Analyzing...",
+                  },
+                  { label: "Department", value: aiRecommendation?.department || "Analyzing..." },
+                  { label: "Duplicate Matches", value: duplicateMatches.length ? `${duplicateMatches.length} found` : "None found" },
+                ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between text-xs">
                     <span className="text-slate-500 dark:text-slate-500">{label}</span>
-                    <div className="flex items-center gap-1.5">
-                      {conf && <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-purple-500 rounded-full" style={{ width: `${conf}%` }} /></div>}
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{value}</span>
-                    </div>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-right max-w-40">{value}</span>
                   </div>
                 ))}
               </div>
+
+              {aiRecommendation?.summary && (
+                <div className="mt-3 pt-3 border-t border-purple-100">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Summary</p>
+                  <p className="text-xs text-slate-600 leading-relaxed">{aiRecommendation.summary}</p>
+                </div>
+              )}
+
+              {aiAnalysisError && (
+                <p className="text-[10px] text-red-500 mt-2">{aiAnalysisError}</p>
+              )}
 
               <p className="text-[10px] text-slate-400 mt-3 flex items-center gap-1">ⓘ AI-extracted • Review before submitting</p>
             </div>
@@ -704,13 +802,26 @@ aiAnalysis: aiRecommendation || undefined,
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Complaint Description</p>
-                  <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">There is a large pothole near the main gate that has been there for 5 days causing accidents and damaging vehicles.</p>
+                  <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">{text.trim() || "No complaint entered."}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {[
-                    { label: "Category", value: "Roads" }, { label: "Subcategory", value: "Pothole" },
-                    { label: "Priority", value: "High" }, { label: "Location", value: "Main Gate Road, Sector 7" },
-                    { label: "Zone", value: "Zone 4" }, { label: "Expected SLA", value: "24 hours" },
+                    { label: "Category", value: aiRecommendation?.category || "Not analyzed" },
+                    { label: "Subcategory", value: aiRecommendation?.subcategory || "Not analyzed" },
+                    {
+                      label: "Priority",
+                      value: aiRecommendation?.priorityScore != null
+                        ? `${aiRecommendation.priorityScore} / 100`
+                        : "Not analyzed",
+                    },
+                    { label: "Department", value: aiRecommendation?.department || "Not analyzed" },
+                    { label: "Location", value: "Main Gate Road, Sector 7" },
+                    {
+                      label: "Confidence",
+                      value: aiRecommendation?.confidence != null
+                        ? `${Math.round(aiRecommendation.confidence * 100)}%`
+                        : "Not analyzed",
+                    },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{label}</p>
@@ -770,12 +881,12 @@ aiAnalysis: aiRecommendation || undefined,
               <p className="text-xs font-semibold text-purple-800 mb-3">✦ AI Summary</p>
               <div className="space-y-2 text-xs">
                 {[
-                  { k: "Issue", v: "Road damage near Main Gate" },
-                  { k: "Duration", v: "5 days" },
-                  { k: "Affected", v: "~200 households" },
-                  { k: "Risk", v: "High pedestrian safety risk" },
-                  { k: "Similar", v: "17 similar complaints" },
-                  { k: "Dept.", v: "Public Works Dept." },
+                  { k: "Summary", v: aiRecommendation?.summary || "AI analysis will appear as you type." },
+                  { k: "Category", v: aiRecommendation?.category || "Not analyzed" },
+                  { k: "Priority", v: aiRecommendation?.priorityScore != null ? `${aiRecommendation.priorityScore} / 100` : "Not analyzed" },
+                  { k: "Department", v: aiRecommendation?.department || "Not analyzed" },
+                  { k: "Confidence", v: aiRecommendation?.confidence != null ? `${Math.round(aiRecommendation.confidence * 100)}%` : "Not analyzed" },
+                  { k: "Similar", v: duplicateMatches.length ? `${duplicateMatches.length} found` : "None found" },
                 ].map(({ k, v }) => (
                   <div key={k} className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-500">{k}</span>
@@ -785,14 +896,15 @@ aiAnalysis: aiRecommendation || undefined,
               </div>
             </div>
 
-            <button
-  type="button"
-  onClick={handleAIAnalysis}
-  disabled={aiAnalyzing || !text.trim()}
-  className="w-full mb-3 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
->
-  {aiAnalyzing ? "Analyzing with AI..." : "Analyze with AI"}
-</button>
+            <div className="w-full mb-3 px-4 py-2 rounded-lg bg-purple-50 border border-purple-100 text-purple-700 text-xs font-semibold text-center">
+              {aiAnalyzing
+                ? "✦ AI is analyzing your complaint..."
+                : aiRecommendation
+                  ? "✓ Live AI analysis updated"
+                  : text.trim()
+                    ? "✦ AI analysis will start automatically"
+                    : "Start typing to begin AI analysis"}
+            </div>
 
             <SectionCard title="AI Routing Recommendation">
   <div className="space-y-2 text-xs">
@@ -867,8 +979,8 @@ aiAnalysis: aiRecommendation || undefined,
                 },
                 { label: "Status", value: "Submitted" },
                 { label: "Expected SLA", value: "24 hours" },
-                { label: "Assigned Department", value: "Public Works Department" },
-                { label: "AI Priority Score", value: "78 / 100" },
+                { label: "Assigned Department", value: submittedGrievance?.aiAnalysis?.department || aiRecommendation?.department || "Processing" },
+                { label: "AI Priority Score", value: submittedGrievance?.aiAnalysis?.priorityScore != null ? `${submittedGrievance.aiAnalysis.priorityScore} / 100` : "Processing" },
               ].map(({ label, value, mono }) => (
                 <div key={label} className="flex justify-between items-center pb-2 border-b border-slate-50 last:border-0">
                   <span className="text-slate-500 dark:text-slate-500">{label}</span>

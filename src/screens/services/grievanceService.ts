@@ -83,7 +83,8 @@ export const analyzeGrievance = async (
   grievanceData: {
     title: string;
     description: string;
-  }
+  },
+  signal?: AbortSignal
 ) => {
   const response = await fetch(`${API_URL}/grievances/ai-analyze`, {
     method: "POST",
@@ -92,6 +93,7 @@ export const analyzeGrievance = async (
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(grievanceData),
+    signal,
   });
 
   const data = await response.json();
@@ -114,7 +116,8 @@ export const checkDuplicateGrievances = async (
       city?: string;
       state?: string;
     };
-  }
+  },
+  signal?: AbortSignal
 ) => {
   const response = await fetch(`${API_URL}/grievances/check-duplicates`, {
     method: "POST",
@@ -123,6 +126,7 @@ export const checkDuplicateGrievances = async (
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(grievanceData),
+    signal,
   });
 
   const data = await response.json();
