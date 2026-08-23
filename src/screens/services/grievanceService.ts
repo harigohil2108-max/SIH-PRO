@@ -28,8 +28,16 @@ export const createGrievance = async (
       address?: string;
       city?: string;
       state?: string;
+      coordinates?: {
+        latitude?: number;
+        longitude?: number;
+      };
     };
     evidence?: string[];
+    duplicateMatches?: {
+      grievance: string;
+      similarity: number;
+    }[];
     aiAnalysis?: {
   category?: string;
   subcategory?: string;
@@ -83,6 +91,13 @@ export const analyzeGrievance = async (
   grievanceData: {
     title: string;
     description: string;
+    category?: string;
+    subcategory?: string;
+    location?: {
+      address?: string;
+      city?: string;
+      state?: string;
+    };
   },
   signal?: AbortSignal
 ) => {

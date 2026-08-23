@@ -24,6 +24,7 @@ export const createGrievance = async (req, res) => {
       subcategory,
       location,
       evidence,
+      duplicateMatches,
       aiAnalysis: providedAiAnalysis,
     } = req.body;
 
@@ -48,6 +49,9 @@ export const createGrievance = async (req, res) => {
 
       status: "SUBMITTED",
       priority: "MEDIUM",
+      duplicateMatches: Array.isArray(duplicateMatches)
+        ? duplicateMatches
+        : [],
 
       timeline: [
         {
@@ -75,6 +79,17 @@ export const createGrievance = async (req, res) => {
     confidence: aiAnalysis.confidence,
     summary: aiAnalysis.summary,
   };
+
+  if (aiAnalysis.priorityScore != null) {
+    grievance.priority =
+      aiAnalysis.priorityScore >= 85
+        ? "CRITICAL"
+        : aiAnalysis.priorityScore >= 70
+          ? "HIGH"
+          : aiAnalysis.priorityScore >= 40
+            ? "MEDIUM"
+            : "LOW";
+  }
 
   await grievance.save();
 
@@ -469,7 +484,13 @@ export const submitFeedback = async (req, res) => {
 };
 export const analyzeGrievancePreview = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const {
+      title,
+      description,
+      category,
+      subcategory,
+      location,
+    } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({
@@ -479,9 +500,12 @@ export const analyzeGrievancePreview = async (req, res) => {
     }
 
     const aiAnalysis = await analyzeGrievanceWithAI({
-  title,
-  description,
-});
+      title,
+      description,
+      category,
+      subcategory,
+      location,
+    });
     return res.json({
       success: true,
       aiAnalysis,
@@ -558,10 +582,20 @@ export const checkDuplicateGrievances = async (req, res) => {
             (g) => g._id.toString() === match.grievanceId
           )
       )
-      .map((match) => ({
-        grievance: match.grievanceId,
-        similarity: match.similarity,
-      }));
+      .map((match) => {
+        const grievance = existingGrievances.find(
+          (item) => item._id.toString() === match.grievanceId
+        );
+
+        return {
+          grievance: match.grievanceId,
+          title: grievance?.title || "Similar grievance",
+          description: grievance?.description || "",
+          category: grievance?.category || "",
+          subcategory: grievance?.subcategory || "",
+          similarity: match.similarity,
+        };
+      });
 
     return res.json({
       success: true,
