@@ -1,5 +1,5 @@
 import authRoutes from "./routes/authRoutes.js";
-import connectDB from "./config/db.js";
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -8,6 +8,7 @@ import userRoutes from "./routes/userRoutes.js";
 import grievanceRoutes from "./routes/grievanceRoutes.js";
 
 dotenv.config();
+import connectDB from "./config/db.js";
 connectDB();
 
 const app = express();

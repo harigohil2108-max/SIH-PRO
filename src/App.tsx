@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import type { Role } from "./components/Shared";
+import AuthScreens from "./screens/AuthScreens";
+import { getCurrentUser } from "./screens/services/authService";
 
 // Citizen screens
 import {
@@ -240,12 +242,19 @@ function PlaceholderScreen({ title }: { title: string }) {
 
 // ─── Screen Router ────────────────────────────────────────────────────────────
 function renderScreen(role: Role, screen: string, navigate: (s: string) => void) {
+  const [currentScreen, grievanceId] = screen.split(":");
   if (role === "citizen") {
-    switch (screen) {
+    switch (currentScreen) {
       case "dashboard":       return <CitizenDashboard navigate={navigate} />;
       case "my-grievances":   return <MyGrievances navigate={navigate} />;
       case "submit-grievance":return <SubmitGrievance navigate={navigate} />;
-      case "grievance-detail":return <GrievanceDetail navigate={navigate} />;
+      case "grievance-detail":
+  return (
+    <GrievanceDetail
+      navigate={navigate}
+      grievanceId={grievanceId}
+    />
+  );
       case "notifications":   return <CitizenNotifications />;
       default: return <PlaceholderScreen title={screen.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())} />;
     }
@@ -278,14 +287,44 @@ function renderScreen(role: Role, screen: string, navigate: (s: string) => void)
     default: return <PlaceholderScreen title={screen.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())} />;
   }
 }
+type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [role, setRole] = useState<Role>("citizen");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  useEffect(() => {
+  if (!user) return;
+
+  if (user.role === "ADMIN") {
+    setRole("admin");
+  } else if (
+    user.role === "OFFICER" ||
+    user.role === "DEPARTMENT_HEAD"
+  ) {
+    setRole("officer");
+  } else {
+    setRole("citizen");
+  }
+}, [user]);
   const [screen, setScreen] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDark, setIsDark] = useState(false);
-
+  useEffect(() => {
+  getCurrentUser()
+    .then((currentUser) => {
+      setUser(currentUser);
+    })
+    .finally(() => {
+      setAuthLoading(false);
+    });
+}, []);
   // Apply/remove "dark" class on <html> whenever isDark changes
   useEffect(() => {
     const html = document.documentElement;
@@ -298,26 +337,30 @@ export default function App() {
 
   const navigate = (s: string) => setScreen(s);
 
-  const switchRole = (r: Role) => {
-    setRole(r);
-    setScreen("dashboard");
-  };
+  
+  if (authLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+      <div className="text-sm text-slate-500">
+        Loading Nivara...
+      </div>
+    </div>
+  );
+}
 
+if (!user) {
+  return (
+    <AuthScreens
+      onAuthenticated={(authenticatedUser) => {
+        setUser(authenticatedUser);
+      }}
+    />
+  );
+}
   return (
     <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
-      {/* Role Switcher Banner */}
-      <div className="bg-[#0f2b4e] flex items-center justify-center gap-2 py-1.5 flex-shrink-0">
-        <span className="text-xs text-blue-300 font-medium mr-2">Switch role:</span>
-        {(["citizen", "officer", "admin"] as Role[]).map(r => (
-          <button key={r} onClick={() => switchRole(r)}
-            className={`text-xs px-3 py-1 rounded-full font-medium transition-colors capitalize ${
-              role === r ? "bg-white text-[#0f2b4e]" : "text-blue-200 hover:text-white"
-            }`}>
-            {r === "citizen" ? "Citizen" : r === "officer" ? "Officer" : "Admin"}
-          </button>
-        ))}
-      </div>
-
+      
+      
       {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar role={role} open={sidebarOpen} activeScreen={screen} navigate={navigate} />
