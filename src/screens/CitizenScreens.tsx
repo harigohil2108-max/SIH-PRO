@@ -12,6 +12,7 @@ import {
   submitFeedback,
   reopenGrievance,
 } from "./services/grievanceService";
+import { getCurrentUser } from "./services/authService";
 
 const trendData = [
   { month: "Jan", submitted: 38, resolved: 22 }, { month: "Feb", submitted: 45, resolved: 28 },
@@ -54,6 +55,11 @@ export function CitizenDashboard({
   const [grievances, setGrievances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUser().then((user) => setCurrentUser(user));
+  }, []);
 
   useEffect(() => {
     const fetchGrievances = async () => {
@@ -82,7 +88,7 @@ export function CitizenDashboard({
 
   return  (
     <div className="p-6 space-y-5">
-      <PageHeader title="Welcome back, Priya" subtitle="Your Voice. Our Responsibility.">
+      <PageHeader title={`Welcome back, ${currentUser?.name || "User"}`} subtitle="Your Voice. Our Responsibility.">
         <SecondaryBtn onClick={() => navigate("my-grievances")}>Track Grievances</SecondaryBtn>
         <PrimaryBtn onClick={() => navigate("submit-grievance")}><span>+</span> Submit New Grievance</PrimaryBtn>
       </PageHeader>
@@ -797,6 +803,12 @@ const [feedbackMessage, setFeedbackMessage] = useState("");
   const [grievance, setGrievance] = useState<any>(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+useEffect(() => {
+  getCurrentUser().then((user) => setCurrentUser(user));
+}, []);
+
 useEffect(() => {
   const fetchGrievance = async () => {
     const token = localStorage.getItem("token");
@@ -974,7 +986,7 @@ if (error) {
               <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
                 {[
                   { sender: "Officer", name: "Rajesh Kumar", text: "We have received your complaint and will schedule a field visit shortly.", time: "Aug 16, 09:15 AM", self: false },
-                  { sender: "You", name: "Priya Sharma", text: "Thank you. The pothole has caused two accidents already. Please prioritize.", time: "Aug 16, 10:30 AM", self: true },
+                  { sender: "You", name: currentUser?.name || "You", text: "Thank you. The pothole has caused two accidents already. Please prioritize.", time: "Aug 16, 10:30 AM", self: true },
                   { sender: "Officer", name: "Rajesh Kumar", text: "Noted. We have escalated the priority to High. Field visit scheduled for Aug 18.", time: "Aug 17, 09:00 AM", self: false },
                 ].map((msg, i) => (
                   <div key={i} className={`flex gap-3 ${msg.self ? "flex-row-reverse" : ""}`}>

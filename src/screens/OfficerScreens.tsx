@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
   StatusBadge, PriorityBadge, Timeline, ChartLegend, FilterChip, SlaIndicator, ScoreBar, AiBadge,
 } from "../components/Shared";
 import MapSvg from "../components/MapSvg";
+import { getCurrentUser } from "./services/authService";
 
 const trendData = [
   { month: "Jan", submitted: 38, resolved: 22 }, { month: "Feb", submitted: 45, resolved: 28 },
@@ -32,9 +33,17 @@ const queue = [
 
 // ─── Officer Dashboard ────────────────────────────────────────────────────────
 export function OfficerDashboard({ navigate }: { navigate: (screen: string) => void }) {
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((user) => setCurrentUser(user))
+      .catch(() => setCurrentUser(null));
+  }, []);
+
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Welcome back, Rajesh" subtitle="Officer Workspace • Real-time Civic SLA Monitoring">
+      <PageHeader title={`Welcome back, ${currentUser?.name || "Rajesh"}`} subtitle="Officer Workspace • Real-time Civic SLA Monitoring">
         <SecondaryBtn onClick={() => navigate("my-assignments")}>My Assignments</SecondaryBtn>
         <PrimaryBtn onClick={() => navigate("priority-queue")}><span>+</span> View Priority Queue</PrimaryBtn>
       </PageHeader>
@@ -220,6 +229,14 @@ export function PriorityQueue({ navigate }: { navigate: (screen: string) => void
 
 // ─── Grievance Detail (Officer) ───────────────────────────────────────────────
 export function OfficerGrievanceDetail({ navigate }: { navigate: (screen: string) => void }) {
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((user) => setCurrentUser(user))
+      .catch(() => setCurrentUser(null));
+  }, []);
+
   const [tab, setTab] = useState<"overview" | "ai" | "communication" | "resolution">("overview");
   const [humanPriority, setHumanPriority] = useState("Critical");
   const [overrideReason, setOverrideReason] = useState("");
@@ -517,7 +534,7 @@ export function OfficerGrievanceDetail({ navigate }: { navigate: (screen: string
               <div className="space-y-4 mb-4 max-h-80 overflow-y-auto">
                 {[
                   { sender: "citizen", name: "Citizen A", text: "No water since 18 hours. This is an emergency.", time: "Aug 19, 8:00 AM" },
-                  { sender: "officer", name: "Rajesh Kumar", text: "We have acknowledged your complaint and dispatching inspection team.", time: "Aug 19, 9:30 AM" },
+                  { sender: "officer", name: currentUser?.name || "Rajesh Kumar", text: "We have acknowledged your complaint and dispatching inspection team.", time: "Aug 19, 9:30 AM" },
                   { sender: "citizen", name: "Citizen B", text: "Same issue in Sector 7B also. Multiple families affected.", time: "Aug 19, 10:00 AM" },
                 ].map((msg, i) => (
                   <div key={i} className={`flex gap-3 ${msg.sender === "officer" ? "flex-row-reverse" : ""}`}>

@@ -1,13 +1,16 @@
 const API_URL = "http://localhost:5000/api";
 
-export async function login(email: string, password: string) {
+export async function login(
+  identifier: string,
+  password: string
+) {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      email,
+      identifier,
       password,
     }),
   });
@@ -20,11 +23,16 @@ export async function login(email: string, password: string) {
 
   return data;
 }
+
 export async function register(
   name: string,
   email: string,
   phone: string,
-  password: string
+  password: string,
+  role: "CITIZEN" | "OFFICER" | "ADMIN" = "CITIZEN",
+  officialId?: string,
+  department?: string,
+  designation?: string
 ) {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
@@ -36,6 +44,10 @@ export async function register(
       email,
       phone,
       password,
+      role,
+      officialId,
+      department,
+      designation,
     }),
   });
 

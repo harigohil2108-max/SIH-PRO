@@ -27,11 +27,18 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
 
-    role: {
-      type: String,
-      enum: ["CITIZEN", "OFFICER", "ADMIN", "DEPARTMENT_HEAD"],
-      default: "CITIZEN",
-    },
+          role: {
+        type: String,
+        enum: ["CITIZEN", "OFFICER", "ADMIN"],
+        default: "CITIZEN",
+      },
+
+      officialId: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+      },
 
     department: {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
   StatusBadge, PriorityBadge, Timeline, ChartLegend, FilterChip, SlaIndicator, AiBadge,
 } from "../components/Shared";
 import MapSvg from "../components/MapSvg";
+import { getCurrentUser } from "./services/authService";
 
 const trendData = [
   { month: "Jan", submitted: 85, resolved: 62 }, { month: "Feb", submitted: 98, resolved: 74 },
@@ -44,9 +45,17 @@ const allGrievances = [
 
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 export function AdminDashboard({ navigate }: { navigate: (s: string) => void }) {
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((user) => setCurrentUser(user))
+      .catch(() => setCurrentUser(null));
+  }, []);
+
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Welcome back, Administrator" subtitle="Admin Command Center • Nivara Core Management Platform">
+      <PageHeader title={`Welcome back, ${currentUser?.name || "Administrator"}`} subtitle="Admin Command Center • Nivara Core Management Platform">
         <SecondaryBtn onClick={() => navigate("reports")}>Generate Report</SecondaryBtn>
         <PrimaryBtn onClick={() => navigate("all-grievances")}><span>+</span> System Overview</PrimaryBtn>
       </PageHeader>
