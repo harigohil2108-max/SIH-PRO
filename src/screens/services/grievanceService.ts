@@ -30,6 +30,15 @@ export const createGrievance = async (
       state?: string;
     };
     evidence?: string[];
+    aiAnalysis?: {
+  category?: string;
+  subcategory?: string;
+  department?: string;
+  priorityScore?: number;
+  priorityReason?: string;
+  confidence?: number;
+  summary?: string;
+};
   }
 ) => {
   const response = await fetch(`${API_URL}/grievances`, {
@@ -68,6 +77,65 @@ export const getGrievanceById = async (
 
   return data;
 };
+
+export const analyzeGrievance = async (
+  token: string,
+  grievanceData: {
+    title: string;
+    description: string;
+  }
+) => {
+  const response = await fetch(`${API_URL}/grievances/ai-analyze`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(grievanceData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to analyze grievance");
+  }
+
+  return data;
+}; 
+export const checkDuplicateGrievances = async (
+  token: string,
+  grievanceData: {
+    title: string;
+    description: string;
+    category?: string;
+    subcategory?: string;
+    location?: {
+      address?: string;
+      city?: string;
+      state?: string;
+    };
+  }
+) => {
+  const response = await fetch(`${API_URL}/grievances/check-duplicates`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(grievanceData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to check duplicate grievances"
+    );
+  }
+
+  return data;
+};
+
 export const submitFeedback = async (
   token: string,
   grievanceId: string,

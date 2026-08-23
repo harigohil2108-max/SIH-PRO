@@ -1,6 +1,8 @@
 import Grievance from "../models/Grievance.js";
 import Department from "../models/Department.js";
 import User from "../models/User.js";
+import { analyzeGrievance as analyzeGrievanceWithAI } from "../services/aiService.js";
+import { findDuplicateGrievances } from "../services/duplicateService.js";
 
 const generateGrievanceId = () => {
   const random = Math.floor(1000 + Math.random() * 9000);
@@ -22,6 +24,7 @@ export const createGrievance = async (req, res) => {
       subcategory,
       location,
       evidence,
+      aiAnalysis: providedAiAnalysis,
     } = req.body;
 
     if (!title || !description) {
@@ -54,6 +57,31 @@ export const createGrievance = async (req, res) => {
         },
       ],
     });
+    try {
+  const aiAnalysis = providedAiAnalysis || await analyzeGrievance({
+    title: grievance.title,
+    description: grievance.description,
+    category: grievance.category,
+    subcategory: grievance.subcategory,
+    location: grievance.location,
+  });
+
+  grievance.aiAnalysis = {
+    category: aiAnalysis.category,
+    subcategory: aiAnalysis.subcategory,
+    department: aiAnalysis.department,
+    priorityScore: aiAnalysis.priorityScore,
+    priorityReason: aiAnalysis.priorityReason,
+    confidence: aiAnalysis.confidence,
+    summary: aiAnalysis.summary,
+  };
+
+  await grievance.save();
+
+  console.log("AI grievance analysis completed");
+} catch (aiError) {
+  console.error("AI analysis skipped:", aiError.message);
+}
 
     res.status(201).json({
       success: true,
@@ -142,6 +170,8 @@ export const getGrievanceById = async (req, res) => {
     });
   }
 };
+
+
 
 // ============================================================
 // UPDATE GRIEVANCE STATUS
@@ -434,6 +464,116 @@ export const submitFeedback = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while submitting feedback",
+    });
+  }
+};
+export const analyzeGrievancePreview = async (req, res) => {
+  try {
+    const { title, description } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and description are required",
+      });
+    }
+
+    const aiAnalysis = await analyzeGrievanceWithAI({
+  title,
+  description,
+});
+    return res.json({
+      success: true,
+      aiAnalysis,
+    });
+  } catch (error) {
+    console.error("AI grievance analysis error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "AI analysis failed",
+    });
+  }
+};
+export const checkDuplicateGrievances = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      subcategory,
+      location,
+    } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and description are required",
+      });
+    }
+
+    const query = {
+      status: {
+        $nin: ["REJECTED", "CANCELLED"],
+      },
+    };
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (subcategory) {
+      query.subcategory = subcategory;
+    }
+
+    const existingGrievances = await Grievance.find(query)
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select(
+        "_id title description category subcategory location"
+      )
+      .lean();
+
+    const newGrievance = {
+      title,
+      description,
+      category: category || "",
+      subcategory: subcategory || "",
+      location: {
+        city: location?.city || "",
+        state: location?.state || "",
+      },
+    };
+
+    const matches = await findDuplicateGrievances(
+      newGrievance,
+      existingGrievances
+    );
+
+    const duplicateMatches = matches
+      .filter(
+        (match) =>
+          match.similarity >= 0.75 &&
+          existingGrievances.some(
+            (g) => g._id.toString() === match.grievanceId
+          )
+      )
+      .map((match) => ({
+        grievance: match.grievanceId,
+        similarity: match.similarity,
+      }));
+
+    return res.json({
+      success: true,
+      hasDuplicates: duplicateMatches.length > 0,
+      duplicateMatches,
+    });
+  } catch (error) {
+    console.error("Duplicate grievance check error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to check for duplicate grievances",
     });
   }
 };

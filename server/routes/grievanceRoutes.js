@@ -12,6 +12,8 @@ import {
   escalateGrievance,
   reopenGrievance,
   submitFeedback,
+  analyzeGrievancePreview,
+  checkDuplicateGrievances,
 } from "../controllers/grievanceController.js";
 
 const router = express.Router();
@@ -30,6 +32,17 @@ router.get(
   "/",
   authenticateUser,
   getMyGrievances
+);
+
+router.post(
+  "/ai-analyze",
+  authenticateUser,
+  analyzeGrievancePreview
+);
+router.post(
+  "/check-duplicates",
+  authenticateUser,
+  checkDuplicateGrievances
 );
 
 router.get(
@@ -98,5 +111,6 @@ router.post(
   authorizeRoles("CITIZEN"),
   submitFeedback
 );
+
 
 export default router;

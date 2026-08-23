@@ -11,6 +11,9 @@ import {
   createGrievance,
   submitFeedback,
   reopenGrievance,
+  analyzeGrievance,
+  checkDuplicateGrievances,
+
 } from "./services/grievanceService";
 
 const trendData = [
@@ -354,6 +357,73 @@ export function SubmitGrievance({ navigate }: { navigate: (screen: string) => vo
   const [submittedGrievance, setSubmittedGrievance] = useState<any>(null);
 const [submitting, setSubmitting] = useState(false);
 const [submitError, setSubmitError] = useState("");
+const [aiRecommendation, setAiRecommendation] = useState<any>(null);
+const [aiAnalyzing, setAiAnalyzing] = useState(false);
+const [duplicateMatches, setDuplicateMatches] = useState<any[]>([]);
+const handleAIAnalysis = async () => {
+  if (!text.trim()) {
+    setSubmitError("Please enter your grievance description first.");
+    return;
+  }
+
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    setSubmitError("Please login again.");
+    return;
+  }
+
+  try {
+    setAiAnalyzing(true);
+    setSubmitError("");
+    setDuplicateMatches([]);
+
+    const title = text.trim().slice(0, 80);
+    const description = text.trim();
+
+    // 1. AI grievance analysis
+    const result = await analyzeGrievance(token, {
+      title,
+      description,
+    });
+
+    setAiRecommendation(result.aiAnalysis);
+
+    // 2. Check for duplicate grievances
+    try {
+  const duplicateResult = await checkDuplicateGrievances(token, {
+    title,
+    description,
+    category: result.aiAnalysis?.category,
+    subcategory: result.aiAnalysis?.subcategory,
+    location: {
+      address: "",
+      city: "",
+      state: "",
+    },
+  });
+
+  setDuplicateMatches(
+    duplicateResult.hasDuplicates
+      ? duplicateResult.duplicateMatches || []
+      : []
+  );
+} catch (duplicateError) {
+  console.error("Duplicate check error:", duplicateError);
+  setDuplicateMatches([]);
+}
+  } catch (error) {
+    console.error("AI analysis error:", error);
+
+    setSubmitError(
+      error instanceof Error
+        ? error.message
+        : "Failed to analyze grievance"
+    );
+  } finally {
+    setAiAnalyzing(false);
+  }
+};
 const handleSubmit = async () => {
   try {
     setSubmitting(true);
@@ -380,8 +450,10 @@ const handleSubmit = async () => {
 
       description: text.trim(),
 
-      category: "Roads",
-      subcategory: "Pothole",
+      category: aiRecommendation?.category || "Roads",
+subcategory: aiRecommendation?.subcategory || "Pothole",
+
+aiAnalysis: aiRecommendation || undefined,
 
       location: {
         address: "Main Gate Road, Sector 7",
@@ -659,18 +731,29 @@ const handleSubmit = async () => {
             </SectionCard>
 
             {/* Duplicate Warning */}
+            {duplicateMatches.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <span className="text-amber-500 text-lg mt-0.5">⚠</span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-amber-800">Possible Similar Grievance Found</p>
                   <div className="mt-2 bg-white rounded-lg border border-amber-100 p-3">
-                    <p className="font-mono text-xs text-blue-600 font-semibold">GRV-1021</p>
-                    <p className="text-sm text-slate-700 mt-0.5">"Large pothole near railway crossing"</p>
+                    <p className="font-mono text-xs text-blue-600 font-semibold">
+  {duplicateMatches[0]?.grievance}
+</p>
+                    <p className="text-sm text-slate-700 mt-0.5">
+  Similar grievance detected
+</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-slate-500 dark:text-slate-500">Similarity:</span>
-                      <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden max-w-24"><div className="h-full bg-amber-500 rounded-full" style={{ width: "93%" }} /></div>
-                      <span className="text-xs font-bold text-amber-700">93%</span>
+                      <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden max-w-24"><div className="h-full bg-amber-500 rounded-full" style={{
+  width: `${Math.round(
+    (duplicateMatches[0]?.similarity || 0) * 100
+  )}%`,
+}} /></div>
+                      <span className="text-xs font-bold text-amber-700">
+  {Math.round((duplicateMatches[0]?.similarity || 0) * 100)}%
+</span>
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3">
@@ -680,7 +763,7 @@ const handleSubmit = async () => {
                 </div>
               </div>
             </div>
-          </div>
+            )}</div>
 
           <div className="space-y-4">
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
@@ -702,19 +785,67 @@ const handleSubmit = async () => {
               </div>
             </div>
 
+            <button
+  type="button"
+  onClick={handleAIAnalysis}
+  disabled={aiAnalyzing || !text.trim()}
+  className="w-full mb-3 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {aiAnalyzing ? "Analyzing with AI..." : "Analyze with AI"}
+</button>
+
             <SectionCard title="AI Routing Recommendation">
-              <div className="space-y-2 text-xs">
-                <div><p className="text-slate-400 dark:text-slate-500">Department</p><p className="font-semibold text-slate-800 dark:text-slate-200">Public Works Department</p></div>
-                <div><p className="text-slate-400 dark:text-slate-500">Sub-Department</p><p className="font-semibold text-slate-800 dark:text-slate-200">Road Maintenance</p></div>
-                <div><p className="text-slate-400 dark:text-slate-500">Confidence</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: "96%" }} /></div>
-                    <span className="font-bold text-blue-700">96%</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-3">ⓘ AI recommendation only</p>
-            </SectionCard>
+  <div className="space-y-2 text-xs">
+    <div>
+      <p className="text-slate-400 dark:text-slate-500">
+        Department
+      </p>
+      <p className="font-semibold text-slate-800 dark:text-slate-200">
+        {aiRecommendation?.department || "Not analyzed yet"}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-slate-400 dark:text-slate-500">
+        Sub-Department
+      </p>
+      <p className="font-semibold text-slate-800 dark:text-slate-200">
+        {aiRecommendation?.subcategory || "Not analyzed yet"}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-slate-400 dark:text-slate-500">
+        Confidence
+      </p>
+
+      <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-500 rounded-full"
+            style={{
+              width: `${
+                aiRecommendation?.confidence != null
+                  ? aiRecommendation.confidence * 100
+                  : 0
+              }%`,
+            }}
+          />
+        </div>
+
+        <span className="font-bold text-blue-700">
+          {aiRecommendation?.confidence != null
+            ? `${Math.round(aiRecommendation.confidence * 100)}%`
+            : "N/A"}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <p className="text-[10px] text-slate-400 mt-3">
+    ⓘ AI recommendation only
+  </p>
+</SectionCard>
           </div>
         </div>
       )}
@@ -748,7 +879,15 @@ const handleSubmit = async () => {
           </div>
 
           <div className="flex gap-3">
-            <PrimaryBtn onClick={() => navigate("grievance-detail")}>Track Grievance</PrimaryBtn>
+            <PrimaryBtn
+  onClick={() =>
+    navigate(
+      `grievance-detail:${submittedGrievance?._id}`
+    )
+  }
+>
+  Track Grievance
+</PrimaryBtn>
             <SecondaryBtn onClick={() => navigate("dashboard")}>Back to Dashboard</SecondaryBtn>
           </div>
         </div>
@@ -797,6 +936,16 @@ const [feedbackMessage, setFeedbackMessage] = useState("");
   const [grievance, setGrievance] = useState<any>(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
+const getAIPriority = (score?: number) => {
+  if (score == null) return "N/A";
+  if (score >= 85) return "CRITICAL";
+  if (score >= 70) return "HIGH";
+  if (score >= 40) return "MEDIUM";
+  return "LOW";
+};
+const aiPriority = getAIPriority(
+  grievance?.aiAnalysis?.priorityScore
+);
 useEffect(() => {
   const fetchGrievance = async () => {
     const token = localStorage.getItem("token");
@@ -872,14 +1021,83 @@ if (error) {
       </div>
 
       {tab === "overview" && (
+        
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2 space-y-4">
             {/* AI Summary */}
             <AiInsightCard
-              title="AI-Generated Complaint Summary"
-              text={grievance.aiSummary || grievance.description || "No summary available."}
-              disclaimer="AI-generated summary • Verify with official records"
-            />
+  title="AI-Generated Complaint Summary"
+  text={
+    grievance.aiAnalysis?.summary ||
+    grievance.description ||
+    "No summary available."
+  }
+  disclaimer="AI-generated summary • Verify with official records"
+/>
+            {grievance?.aiAnalysis && (
+  <SectionCard title="AI Analysis">
+    <div className="grid grid-cols-2 gap-4">
+
+      <div>
+        <p className="text-xs text-slate-400">Category</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.category || "Not available"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Subcategory</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.subcategory || "Not available"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Department</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.department || "Not assigned"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Priority Score</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.priorityScore ?? "Not available"}/100
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Confidence</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.confidence != null
+            ? `${Math.round(grievance.aiAnalysis.confidence * 100)}%`
+            : "Not available"}
+        </p>
+      </div>
+      <div>
+  <p className="text-xs text-slate-400">
+    AI Priority Recommendation
+  </p>
+  <p className="font-semibold text-slate-800">
+    {aiPriority}
+  </p>
+</div>
+
+    </div>
+
+    {grievance.aiAnalysis.priorityReason && (
+      <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+        <p className="text-xs text-slate-400 mb-1">
+          AI Priority Reason
+        </p>
+
+        <p className="text-sm text-slate-700">
+          {grievance.aiAnalysis.priorityReason}
+        </p>
+      </div>
+    )}
+  </SectionCard>
+)}
 
             {/* Location Map */}
             <SectionCard title="Complaint Location" subtitle={
