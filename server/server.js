@@ -8,6 +8,7 @@ import userRoutes from "./routes/userRoutes.js";
 import grievanceRoutes from "./routes/grievanceRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import { analyzeGrievance } from "./services/aiService.js";
 
 import connectDB from "./config/db.js";
 
@@ -44,6 +45,40 @@ app.get("/api/health", (req, res) => {
     success: true,
     message: "Nivara backend is running successfully",
   });
+});
+app.get("/api/ai-test", async (req, res) => {
+  try {
+    const message = await testAI();
+
+    res.json({
+      success: true,
+      message,
+    });
+  } catch (error) {
+    console.error("AI test error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+app.post("/api/ai/analyze-test", async (req, res) => {
+  try {
+    const result = await analyzeGrievance(req.body);
+
+    res.json({
+      success: true,
+      analysis: result,
+    });
+  } catch (error) {
+    console.error("AI analysis test error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });
 
 // ============================================================

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
@@ -11,26 +11,50 @@ import {
   createGrievance,
   submitFeedback,
   reopenGrievance,
+  analyzeGrievance,
+  checkDuplicateGrievances,
+
 } from "./services/grievanceService";
 import { getCurrentUser } from "./services/authService";
 
-const trendData = [
-  { month: "Jan", submitted: 38, resolved: 22 }, { month: "Feb", submitted: 45, resolved: 28 },
-  { month: "Mar", submitted: 52, resolved: 38 }, { month: "Apr", submitted: 41, resolved: 30 },
-  { month: "May", submitted: 60, resolved: 42 }, { month: "Jun", submitted: 70, resolved: 50 },
-  { month: "Jul", submitted: 85, resolved: 55 }, { month: "Aug", submitted: 75, resolved: 58 },
-  { month: "Sep", submitted: 80, resolved: 60 }, { month: "Oct", submitted: 95, resolved: 65 },
-  { month: "Nov", submitted: 110, resolved: 72 }, { month: "Dec", submitted: 120, resolved: 80 },
+const CATEGORY_COLORS = [
+  "#1e3a5f",
+  "#2563eb",
+  "#16a34a",
+  "#d97706",
+  "#7c3aed",
+  "#db2777",
 ];
 
-const catData = [
-  { name: "Roads", value: 8, color: "#1e3a5f" },
-  { name: "Water Supply", value: 7, color: "#2563eb" },
-  { name: "Electricity", value: 4, color: "#16a34a" },
-  { name: "Sanitation", value: 3, color: "#d97706" },
-  { name: "Waste Mgmt", value: 1, color: "#7c3aed" },
-  { name: "Street Lights", value: 1, color: "#db2777" },
-];
+const getMonthKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const formatMonth = (date: Date) =>
+  date.toLocaleDateString(undefined, { month: "short" });
+
+const getResolutionDate = (grievance: any) => {
+  const timelineResolution = grievance?.timeline?.find(
+    (item: any) => item.status === "RESOLVED" || item.status === "CLOSED"
+  )?.timestamp;
+
+  return grievance?.resolution?.resolvedAt || timelineResolution || null;
+};
+
+const getAverageResolutionDays = (items: any[]) => {
+  const durations = items
+    .map((g) => {
+      const created = new Date(g.createdAt).getTime();
+      const resolved = getResolutionDate(g);
+      if (!resolved || Number.isNaN(created)) return null;
+      const resolvedTime = new Date(resolved).getTime();
+      if (Number.isNaN(resolvedTime) || resolvedTime < created) return null;
+      return (resolvedTime - created) / (1000 * 60 * 60 * 24);
+    })
+    .filter((value): value is number => value != null);
+
+  if (!durations.length) return "N/A";
+  return `${(durations.reduce((sum, value) => sum + value, 0) / durations.length).toFixed(1)} days`;
+};
 
  //n
 
@@ -86,6 +110,54 @@ export function CitizenDashboard({
     fetchGrievances();
   }, []);
 
+  const totalGrievances = grievances.length;
+  const pendingGrievances = grievances.filter((g) =>
+    ["SUBMITTED", "UNDER_REVIEW", "ASSIGNED"].includes(g.status)
+  ).length;
+  const inProgressGrievances = grievances.filter(
+    (g) => g.status === "IN_PROGRESS"
+  ).length;
+  const resolvedGrievances = grievances.filter((g) =>
+    ["RESOLVED", "CLOSED"].includes(g.status)
+  ).length;
+  const reopenedGrievances = grievances.filter(
+    (g) => g.status === "REOPENED"
+  ).length;
+
+  const categoryCounts = grievances.reduce<Record<string, number>>((acc, grievance) => {
+    const category = grievance.category || grievance.aiAnalysis?.category || "Uncategorized";
+    acc[category] = (acc[category] || 0) + 1;
+    return acc;
+  }, {});
+
+  const catData = Object.entries(categoryCounts).map(([name, value], index) => ({
+    name,
+    value,
+    color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+  }));
+
+  const now = new Date();
+  const trendData = Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
+    const key = getMonthKey(date);
+
+    return {
+      month: formatMonth(date),
+      submitted: grievances.filter(
+        (g) => getMonthKey(new Date(g.createdAt)) === key
+      ).length,
+      resolved: grievances.filter((g) => {
+        const resolvedAt = getResolutionDate(g);
+        return resolvedAt
+          ? getMonthKey(new Date(resolvedAt)) === key
+          : false;
+      }).length,
+    };
+  });
+
+  const latestGrievance = grievances[0];
+  const latestTimeline = latestGrievance?.timeline?.slice(-5).reverse() || [];
+
   return  (
     <div className="p-6 space-y-5">
       <PageHeader title={`Welcome back, ${currentUser?.name || "User"}`} subtitle="Your Voice. Our Responsibility.">
@@ -94,12 +166,12 @@ export function CitizenDashboard({
       </PageHeader>
 
       <div className="flex gap-3 overflow-x-auto pb-1">
-        <KpiCard label="Total Grievances" value="24" trend="+12.5%" trendUp={true} />
-        <KpiCard label="Pending" value="8" trend="+23.1%" trendUp={true} />
-        <KpiCard label="In Progress" value="6" trend="+8.2%" trendUp={true} />
-        <KpiCard label="Resolved" value="7" trend="-2.1%" trendUp={false} />
-        <KpiCard label="Reopened" value="2" trend="+5.3%" trendUp={true} />
-        <KpiCard label="Avg Resolution" value="4.2 days" trend="+15.7%" trendUp={true} />
+        <KpiCard label="Total Grievances" value={String(totalGrievances)} />
+        <KpiCard label="Pending" value={String(pendingGrievances)} />
+        <KpiCard label="In Progress" value={String(inProgressGrievances)} />
+        <KpiCard label="Resolved" value={String(resolvedGrievances)} />
+        <KpiCard label="Reopened" value={String(reopenedGrievances)} />
+        <KpiCard label="Avg Resolution" value={getAverageResolutionDays(grievances)} />
       </div>
 
       <div className="grid grid-cols-3 gap-5">
@@ -133,7 +205,7 @@ export function CitizenDashboard({
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
                 {grievances.map((r) => (
-                  <tr key={r.grievanceId} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate("grievance-detail")}>
+                  <tr key={r.grievanceId} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`grievance-detail:${r._id}`)}>
                     <td className="py-2.5 pr-3 font-mono text-xs text-slate-500 dark:text-slate-500">{r.grievanceId}</td>
                     <td className="py-2.5 pr-3 text-slate-800 font-medium text-sm">{r.title}</td>
                     <td className="py-2.5 pr-3 text-slate-500 text-xs">{r.category}</td>
@@ -172,18 +244,42 @@ export function CitizenDashboard({
 
           <AiInsightCard
             title="AI-Assisted Insight"
-            text={<>Your grievance <strong>NV-1024</strong> has been assigned to the <strong>Public Works Department</strong>. The current expected next step is field verification.</>}
+            text={
+              latestGrievance ? (
+                <>
+                  Your latest grievance <strong>{latestGrievance.grievanceId}</strong>{" "}
+                  {latestGrievance.aiAnalysis?.department
+                    ? <>is routed to <strong>{latestGrievance.aiAnalysis.department}</strong>.</>
+                    : <>has been submitted and is awaiting department routing.</>}
+                  {latestGrievance.aiAnalysis?.summary && (
+                    <> AI summary: <strong>{latestGrievance.aiAnalysis.summary}</strong></>
+                  )}
+                </>
+              ) : (
+                <>Submit a grievance to see AI-assisted insights here.</>
+              )
+            }
             disclaimer="AI-generated insight • Not an official government decision"
           />
 
           <SectionCard title="Grievance Timeline">
-            <Timeline steps={[
-              { label: "Submitted", desc: "Citizen filed pothole grievance", time: "Aug 15, 09:30 AM", done: true, actor: "You" },
-              { label: "AI Analyzed", desc: "Classified as Roads – High Priority", time: "Aug 15, 09:31 AM", done: true, actor: "Nivara AI" },
-              { label: "Assigned", desc: "Routed to Public Works Dept.", time: "Aug 15, 10:00 AM", done: true, actor: "System" },
-              { label: "Officer Assigned", desc: "Assigned to Officer Rajesh K.", time: "Aug 16, 09:00 AM", done: false },
-              { label: "Resolved", desc: "Awaiting field verification", time: "Pending", done: false },
-            ]} />
+            {latestTimeline.length ? (
+              <Timeline
+                steps={latestTimeline.map((item: any) => ({
+                  label: formatStatus(item.status),
+                  desc: item.message || "Status updated",
+                  time: item.timestamp
+                    ? new Date(item.timestamp).toLocaleString()
+                    : "Time unavailable",
+                  done: true,
+                  actor: item.actor?.name || "System",
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-slate-500">
+                No grievance activity is available yet.
+              </p>
+            )}
           </SectionCard>
         </div>
       </div>
@@ -360,10 +456,175 @@ export function SubmitGrievance({ navigate }: { navigate: (screen: string) => vo
   const [submittedGrievance, setSubmittedGrievance] = useState<any>(null);
 const [submitting, setSubmitting] = useState(false);
 const [submitError, setSubmitError] = useState("");
+const [aiRecommendation, setAiRecommendation] = useState<any>(null);
+const [aiAnalyzing, setAiAnalyzing] = useState(false);
+const [duplicateMatches, setDuplicateMatches] = useState<any[]>([]);
+const [aiAnalysisError, setAiAnalysisError] = useState("");
+const [location, setLocation] = useState({
+  address: "",
+  city: "",
+  state: "",
+  latitude: undefined as number | undefined,
+  longitude: undefined as number | undefined,
+});
+const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
+const aiAbortController = useRef<AbortController | null>(null);
+const aiRequestId = useRef(0);
+
+const runAIAnalysis = async (finalAnalysis = false) => {
+  const description = text.trim();
+
+  if (!description) {
+    setAiRecommendation(null);
+    setDuplicateMatches([]);
+    return;
+  }
+
+  if (typeof document !== "undefined" && document.hidden) return;
+
+  const token = localStorage.getItem("token");
+  if (!token) {
+    setAiAnalysisError("Please login again.");
+    return;
+  }
+
+  aiAbortController.current?.abort();
+  const controller = new AbortController();
+  aiAbortController.current = controller;
+  const requestId = ++aiRequestId.current;
+
+  try {
+    setAiAnalyzing(true);
+    setAiAnalysisError("");
+
+    const title = description.slice(0, 80);
+
+    const result = await analyzeGrievance(
+      token,
+      {
+        title,
+        description,
+        category: aiRecommendation?.category,
+        subcategory: aiRecommendation?.subcategory,
+        location: {
+          address: location.address,
+          city: location.city,
+          state: location.state,
+        },
+      },
+      controller.signal
+    );
+
+    if (
+      controller.signal.aborted ||
+      requestId !== aiRequestId.current ||
+      document.hidden
+    ) return;
+
+    setAiRecommendation(result.aiAnalysis || null);
+
+    try {
+      const duplicateResult = await checkDuplicateGrievances(
+        token,
+        {
+          title,
+          description,
+          category: result.aiAnalysis?.category,
+          subcategory: result.aiAnalysis?.subcategory,
+          location: {
+            address: location.address,
+            city: location.city,
+            state: location.state,
+          },
+        },
+        controller.signal
+      );
+
+      if (
+        controller.signal.aborted ||
+        requestId !== aiRequestId.current ||
+        document.hidden
+      ) return;
+
+      setDuplicateMatches(
+        duplicateResult.hasDuplicates
+          ? duplicateResult.duplicateMatches || []
+          : []
+      );
+    } catch (duplicateError) {
+      if (!controller.signal.aborted) {
+        console.error("Duplicate check error:", duplicateError);
+        setDuplicateMatches([]);
+      }
+    }
+  } catch (error) {
+    if (controller.signal.aborted) return;
+
+    console.error("AI analysis error:", error);
+    setAiAnalysisError(
+      error instanceof Error ? error.message : "Failed to analyze grievance"
+    );
+  } finally {
+    if (requestId === aiRequestId.current) {
+      setAiAnalyzing(false);
+    }
+  }
+};
+
+// Live AI analysis: start shortly after the citizen begins typing,
+// restart for meaningful changes, and cancel while the tab is hidden.
+useEffect(() => {
+  if (!text.trim()) {
+    aiAbortController.current?.abort();
+    setAiRecommendation(null);
+    setDuplicateMatches([]);
+    setAiAnalyzing(false);
+    return;
+  }
+
+  if (typeof document !== "undefined" && document.hidden) return;
+
+  const timer = window.setTimeout(() => {
+    void runAIAnalysis();
+  }, 900);
+
+  return () => {
+    window.clearTimeout(timer);
+    aiAbortController.current?.abort();
+    aiRequestId.current += 1;
+  };
+}, [text, location.address, location.city, location.state]);
+
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      aiAbortController.current?.abort();
+      aiRequestId.current += 1;
+      setAiAnalyzing(false);
+    } else if (text.trim()) {
+      void runAIAnalysis();
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    aiAbortController.current?.abort();
+  };
+}, [text]);
+
 const handleSubmit = async () => {
   try {
     setSubmitting(true);
     setSubmitError("");
+
+    // Always perform one final analysis using the exact latest complaint
+    // before creating the grievance. This makes submission the final
+    // completion point for the AI analysis.
+    if (text.trim()) {
+      await runAIAnalysis(true);
+    }
 
     const token = localStorage.getItem("token");
 
@@ -386,16 +647,30 @@ const handleSubmit = async () => {
 
       description: text.trim(),
 
-      category: "Roads",
-      subcategory: "Pothole",
+      category: aiRecommendation?.category || undefined,
+      subcategory: aiRecommendation?.subcategory || undefined,
+
+      aiAnalysis: aiRecommendation || undefined,
+
+      duplicateMatches: duplicateMatches.map((match) => ({
+        grievance: match.grievance,
+        similarity: match.similarity,
+      })),
 
       location: {
-        address: "Main Gate Road, Sector 7",
-        city: "Raipur",
-        state: "Chhattisgarh",
+        address: location.address,
+        city: location.city,
+        state: location.state,
+        coordinates:
+          location.latitude != null && location.longitude != null
+            ? {
+                latitude: location.latitude,
+                longitude: location.longitude,
+              }
+            : undefined,
       },
 
-      evidence: [],
+      evidence: evidenceFiles,
     });
 
     console.log("Grievance created:", data);
@@ -496,22 +771,40 @@ const handleSubmit = async () => {
 
               <div className="space-y-2">
                 {[
-                  { label: "Category", value: "Roads", conf: null },
-                  { label: "Subcategory", value: "Pothole", conf: null },
-                  { label: "AI Confidence", value: "94%", conf: 94 },
-                  { label: "Issue Duration", value: "~5 days", conf: null },
-                  { label: "Urgency", value: "High", conf: null },
-                  { label: "Affected People", value: "~200 households", conf: null },
-                ].map(({ label, value, conf }) => (
+                  { label: "Category", value: aiRecommendation?.category || "Analyzing..." },
+                  { label: "Subcategory", value: aiRecommendation?.subcategory || "Analyzing..." },
+                  {
+                    label: "AI Confidence",
+                    value: aiRecommendation?.confidence != null
+                      ? `${Math.round(aiRecommendation.confidence * 100)}%`
+                      : "Analyzing...",
+                  },
+                  {
+                    label: "Priority Score",
+                    value: aiRecommendation?.priorityScore != null
+                      ? `${aiRecommendation.priorityScore} / 100`
+                      : "Analyzing...",
+                  },
+                  { label: "Department", value: aiRecommendation?.department || "Analyzing..." },
+                  { label: "Duplicate Matches", value: duplicateMatches.length ? `${duplicateMatches.length} found` : "None found" },
+                ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between text-xs">
                     <span className="text-slate-500 dark:text-slate-500">{label}</span>
-                    <div className="flex items-center gap-1.5">
-                      {conf && <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-purple-500 rounded-full" style={{ width: `${conf}%` }} /></div>}
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{value}</span>
-                    </div>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-right max-w-40">{value}</span>
                   </div>
                 ))}
               </div>
+
+              {aiRecommendation?.summary && (
+                <div className="mt-3 pt-3 border-t border-purple-100">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Summary</p>
+                  <p className="text-xs text-slate-600 leading-relaxed">{aiRecommendation.summary}</p>
+                </div>
+              )}
+
+              {aiAnalysisError && (
+                <p className="text-[10px] text-red-500 mt-2">{aiAnalysisError}</p>
+              )}
 
               <p className="text-[10px] text-slate-400 mt-3 flex items-center gap-1">ⓘ AI-extracted • Review before submitting</p>
             </div>
@@ -534,7 +827,18 @@ const handleSubmit = async () => {
                 <SecondaryBtn className="text-xs py-1.5">📍 Select Location Manually</SecondaryBtn>
               </div>
               <div className="relative mb-3">
-                <input type="text" placeholder="Search area, street, landmark..." className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" defaultValue="Main Gate Road, Sector 7" />
+                <input
+                  type="text"
+                  placeholder="Search area, street, landmark..."
+                  value={location.address}
+                  onChange={(e) =>
+                    setLocation((current) => ({
+                      ...current,
+                      address: e.target.value,
+                    }))
+                  }
+                  className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
+                />
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
               </div>
               <MapSvg mode="markers" height={320} showLocationPicker={true} />
@@ -545,12 +849,11 @@ const handleSubmit = async () => {
           <SectionCard title="Selected Location">
             <div className="space-y-3">
               {[
-                { label: "Location", value: "Main Gate Road, Sector 7" },
-                { label: "Latitude", value: "21.2514" },
-                { label: "Longitude", value: "81.6296" },
-                { label: "Accuracy", value: "±12 m" },
-                { label: "Zone", value: "Zone 4" },
-                { label: "Ward", value: "Ward 12" },
+                { label: "Location", value: location.address || "Not selected" },
+                { label: "Latitude", value: location.latitude != null ? location.latitude.toFixed(6) : "Not captured" },
+                { label: "Longitude", value: location.longitude != null ? location.longitude.toFixed(6) : "Not captured" },
+                { label: "City", value: location.city || "Not captured" },
+                { label: "State", value: location.state || "Not captured" },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{label}</p>
@@ -560,7 +863,11 @@ const handleSubmit = async () => {
             </div>
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
               <p className="text-xs text-blue-700 font-semibold mb-1">⚡ AI Route Prediction</p>
-              <p className="text-xs text-slate-600 dark:text-slate-400 dark:text-slate-500">Based on location, this will likely route to <strong>Public Works Dept.</strong></p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                {aiRecommendation?.department
+                  ? <>Based on the current complaint analysis, this will likely route to <strong>{aiRecommendation.department}</strong>.</>
+                  : "AI routing will appear after analysis."}
+              </p>
             </div>
           </SectionCard>
         </div>
@@ -580,13 +887,23 @@ const handleSubmit = async () => {
               </div>
 
               <div className="grid grid-cols-3 gap-3 mt-4">
-                {["photo_1.jpg", "photo_2.jpg", "video_1.mp4"].map(name => (
-                  <div key={name} className="bg-slate-100 rounded-lg h-24 flex flex-col items-center justify-center text-slate-500 border border-slate-200 relative group cursor-pointer hover:bg-slate-50 dark:bg-slate-900">
-                    <span className="text-2xl">{name.includes("video") ? "🎥" : "🖼"}</span>
-                    <span className="text-xs mt-1 text-slate-500 dark:text-slate-500">{name}</span>
-                    <button className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] hidden group-hover:flex items-center justify-center">×</button>
-                  </div>
-                ))}
+                {evidenceFiles.length ? (
+                  evidenceFiles.map((name) => (
+                    <div key={name} className="bg-slate-100 rounded-lg h-24 flex flex-col items-center justify-center text-slate-500 border border-slate-200 relative group cursor-pointer hover:bg-slate-50 dark:bg-slate-900">
+                      <span className="text-2xl">{name.match(/\.(mp4|mov|avi|webm)$/i) ? "🎥" : "🖼"}</span>
+                      <span className="text-xs mt-1 text-slate-500 dark:text-slate-500">{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setEvidenceFiles((files) => files.filter((file) => file !== name))}
+                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] hidden group-hover:flex items-center justify-center"
+                      >×</button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="col-span-3 text-xs text-slate-400 text-center py-4">
+                    No evidence attached yet.
+                  </p>
+                )}
               </div>
             </SectionCard>
           </div>
@@ -600,20 +917,39 @@ const handleSubmit = async () => {
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-slate-500 dark:text-slate-500">Issue Detected</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Road damage / Pothole</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    {aiRecommendation?.subcategory || aiRecommendation?.category || "No issue classified yet"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-slate-500">Visual Confidence</p>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-500 rounded-full" style={{ width: "91%" }} />
+                      <div
+                        className="h-full bg-green-500 rounded-full"
+                        style={{
+                          width: `${Math.round((aiRecommendation?.confidence || 0) * 100)}%`,
+                        }}
+                      />
                     </div>
-                    <span className="text-xs font-bold text-green-700">91%</span>
+                    <span className="text-xs font-bold text-green-700">
+                      {aiRecommendation?.confidence != null
+                        ? `${Math.round(aiRecommendation.confidence * 100)}%`
+                        : "N/A"}
+                    </span>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 dark:text-slate-500">Severity Assessment</p>
-                  <p className="text-sm font-semibold text-amber-700">Moderate–High</p>
+                  <p className="text-sm font-semibold text-amber-700">
+                    {aiRecommendation?.priorityScore != null
+                      ? aiRecommendation.priorityScore >= 70
+                        ? "High"
+                        : aiRecommendation.priorityScore >= 40
+                          ? "Moderate"
+                          : "Low"
+                      : "Not assessed"}
+                  </p>
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 mt-3">ⓘ AI assessment only — does not constitute official action</p>
@@ -638,13 +974,26 @@ const handleSubmit = async () => {
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Complaint Description</p>
-                  <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">There is a large pothole near the main gate that has been there for 5 days causing accidents and damaging vehicles.</p>
+                  <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">{text.trim() || "No complaint entered."}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {[
-                    { label: "Category", value: "Roads" }, { label: "Subcategory", value: "Pothole" },
-                    { label: "Priority", value: "High" }, { label: "Location", value: "Main Gate Road, Sector 7" },
-                    { label: "Zone", value: "Zone 4" }, { label: "Expected SLA", value: "24 hours" },
+                    { label: "Category", value: aiRecommendation?.category || "Not analyzed" },
+                    { label: "Subcategory", value: aiRecommendation?.subcategory || "Not analyzed" },
+                    {
+                      label: "Priority",
+                      value: aiRecommendation?.priorityScore != null
+                        ? `${aiRecommendation.priorityScore} / 100`
+                        : "Not analyzed",
+                    },
+                    { label: "Department", value: aiRecommendation?.department || "Not analyzed" },
+                    { label: "Location", value: location.address || "Not selected" },
+                    {
+                      label: "Confidence",
+                      value: aiRecommendation?.confidence != null
+                        ? `${Math.round(aiRecommendation.confidence * 100)}%`
+                        : "Not analyzed",
+                    },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{label}</p>
@@ -655,50 +1004,78 @@ const handleSubmit = async () => {
 
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-2">Attachments</p>
-                  <div className="flex gap-2">
-                    {["photo_1.jpg", "photo_2.jpg", "video_1.mp4"].map(f => (
-                      <div key={f} className="bg-slate-100 rounded px-2 py-1 text-xs text-slate-600 dark:text-slate-400 dark:text-slate-500">{f}</div>
-                    ))}
+                  <div className="flex gap-2 flex-wrap">
+                    {evidenceFiles.length ? evidenceFiles.map((file) => (
+                      <div key={file} className="bg-slate-100 rounded px-2 py-1 text-xs text-slate-600 dark:text-slate-400">{file}</div>
+                    )) : (
+                      <span className="text-xs text-slate-400">No evidence attached</span>
+                    )}
                   </div>
                 </div>
               </div>
             </SectionCard>
 
             {/* Duplicate Warning */}
+            {duplicateMatches.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <span className="text-amber-500 text-lg mt-0.5">⚠</span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-amber-800">Possible Similar Grievance Found</p>
                   <div className="mt-2 bg-white rounded-lg border border-amber-100 p-3">
-                    <p className="font-mono text-xs text-blue-600 font-semibold">GRV-1021</p>
-                    <p className="text-sm text-slate-700 mt-0.5">"Large pothole near railway crossing"</p>
+                    <p className="font-mono text-xs text-blue-600 font-semibold">
+  {duplicateMatches[0]?.grievance}
+</p>
+                    <p className="text-sm text-slate-700 mt-0.5">
+                      {duplicateMatches[0]?.title || "Similar grievance detected"}
+                    </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-slate-500 dark:text-slate-500">Similarity:</span>
-                      <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden max-w-24"><div className="h-full bg-amber-500 rounded-full" style={{ width: "93%" }} /></div>
-                      <span className="text-xs font-bold text-amber-700">93%</span>
+                      <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden max-w-24"><div className="h-full bg-amber-500 rounded-full" style={{
+  width: `${Math.round(
+    (duplicateMatches[0]?.similarity || 0) * 100
+  )}%`,
+}} /></div>
+                      <span className="text-xs font-bold text-amber-700">
+  {Math.round((duplicateMatches[0]?.similarity || 0) * 100)}%
+</span>
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3">
-                    <button className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50">View Similar Grievance</button>
-                    <button className="text-xs text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:bg-slate-900">Continue Anyway</button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        duplicateMatches[0]?.grievance &&
+                        navigate(`grievance-detail:${duplicateMatches[0].grievance}`)
+                      }
+                      className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50"
+                    >
+                      View Similar Grievance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDuplicateMatches([])}
+                      className="text-xs text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:bg-slate-900"
+                    >
+                      Continue Anyway
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+            )}</div>
 
           <div className="space-y-4">
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
               <p className="text-xs font-semibold text-purple-800 mb-3">✦ AI Summary</p>
               <div className="space-y-2 text-xs">
                 {[
-                  { k: "Issue", v: "Road damage near Main Gate" },
-                  { k: "Duration", v: "5 days" },
-                  { k: "Affected", v: "~200 households" },
-                  { k: "Risk", v: "High pedestrian safety risk" },
-                  { k: "Similar", v: "17 similar complaints" },
-                  { k: "Dept.", v: "Public Works Dept." },
+                  { k: "Summary", v: aiRecommendation?.summary || "AI analysis will appear as you type." },
+                  { k: "Category", v: aiRecommendation?.category || "Not analyzed" },
+                  { k: "Priority", v: aiRecommendation?.priorityScore != null ? `${aiRecommendation.priorityScore} / 100` : "Not analyzed" },
+                  { k: "Department", v: aiRecommendation?.department || "Not analyzed" },
+                  { k: "Confidence", v: aiRecommendation?.confidence != null ? `${Math.round(aiRecommendation.confidence * 100)}%` : "Not analyzed" },
+                  { k: "Similar", v: duplicateMatches.length ? `${duplicateMatches.length} found` : "None found" },
                 ].map(({ k, v }) => (
                   <div key={k} className="flex justify-between">
                     <span className="text-slate-500 dark:text-slate-500">{k}</span>
@@ -708,19 +1085,68 @@ const handleSubmit = async () => {
               </div>
             </div>
 
+            <div className="w-full mb-3 px-4 py-2 rounded-lg bg-purple-50 border border-purple-100 text-purple-700 text-xs font-semibold text-center">
+              {aiAnalyzing
+                ? "✦ AI is analyzing your complaint..."
+                : aiRecommendation
+                  ? "✓ Live AI analysis updated"
+                  : text.trim()
+                    ? "✦ AI analysis will start automatically"
+                    : "Start typing to begin AI analysis"}
+            </div>
+
             <SectionCard title="AI Routing Recommendation">
-              <div className="space-y-2 text-xs">
-                <div><p className="text-slate-400 dark:text-slate-500">Department</p><p className="font-semibold text-slate-800 dark:text-slate-200">Public Works Department</p></div>
-                <div><p className="text-slate-400 dark:text-slate-500">Sub-Department</p><p className="font-semibold text-slate-800 dark:text-slate-200">Road Maintenance</p></div>
-                <div><p className="text-slate-400 dark:text-slate-500">Confidence</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: "96%" }} /></div>
-                    <span className="font-bold text-blue-700">96%</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-3">ⓘ AI recommendation only</p>
-            </SectionCard>
+  <div className="space-y-2 text-xs">
+    <div>
+      <p className="text-slate-400 dark:text-slate-500">
+        Department
+      </p>
+      <p className="font-semibold text-slate-800 dark:text-slate-200">
+        {aiRecommendation?.department || "Not analyzed yet"}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-slate-400 dark:text-slate-500">
+        Sub-Department
+      </p>
+      <p className="font-semibold text-slate-800 dark:text-slate-200">
+        {aiRecommendation?.subcategory || "Not analyzed yet"}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-slate-400 dark:text-slate-500">
+        Confidence
+      </p>
+
+      <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-500 rounded-full"
+            style={{
+              width: `${
+                aiRecommendation?.confidence != null
+                  ? aiRecommendation.confidence * 100
+                  : 0
+              }%`,
+            }}
+          />
+        </div>
+
+        <span className="font-bold text-blue-700">
+          {aiRecommendation?.confidence != null
+            ? `${Math.round(aiRecommendation.confidence * 100)}%`
+            : "N/A"}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <p className="text-[10px] text-slate-400 mt-3">
+    ⓘ AI recommendation only
+  </p>
+</SectionCard>
           </div>
         </div>
       )}
@@ -740,10 +1166,15 @@ const handleSubmit = async () => {
                   value: submittedGrievance?.grievanceId || "Generating...",
                   mono: true,
                 },
-                { label: "Status", value: "Submitted" },
-                { label: "Expected SLA", value: "24 hours" },
-                { label: "Assigned Department", value: "Public Works Department" },
-                { label: "AI Priority Score", value: "78 / 100" },
+                { label: "Status", value: submittedGrievance?.status ? formatStatus(submittedGrievance.status) : "Submitted" },
+                {
+                  label: "Expected SLA",
+                  value: submittedGrievance?.sla?.dueAt
+                    ? new Date(submittedGrievance.sla.dueAt).toLocaleString()
+                    : "Not assigned",
+                },
+                { label: "Assigned Department", value: submittedGrievance?.aiAnalysis?.department || aiRecommendation?.department || "Processing" },
+                { label: "AI Priority Score", value: submittedGrievance?.aiAnalysis?.priorityScore != null ? `${submittedGrievance.aiAnalysis.priorityScore} / 100` : "Processing" },
               ].map(({ label, value, mono }) => (
                 <div key={label} className="flex justify-between items-center pb-2 border-b border-slate-50 last:border-0">
                   <span className="text-slate-500 dark:text-slate-500">{label}</span>
@@ -754,7 +1185,15 @@ const handleSubmit = async () => {
           </div>
 
           <div className="flex gap-3">
-            <PrimaryBtn onClick={() => navigate("grievance-detail")}>Track Grievance</PrimaryBtn>
+            <PrimaryBtn
+  onClick={() =>
+    navigate(
+      `grievance-detail:${submittedGrievance?._id}`
+    )
+  }
+>
+  Track Grievance
+</PrimaryBtn>
             <SecondaryBtn onClick={() => navigate("dashboard")}>Back to Dashboard</SecondaryBtn>
           </div>
         </div>
@@ -809,6 +1248,16 @@ useEffect(() => {
   getCurrentUser().then((user) => setCurrentUser(user));
 }, []);
 
+const getAIPriority = (score?: number) => {
+  if (score == null) return "N/A";
+  if (score >= 85) return "CRITICAL";
+  if (score >= 70) return "HIGH";
+  if (score >= 40) return "MEDIUM";
+  return "LOW";
+};
+const aiPriority = getAIPriority(
+  grievance?.aiAnalysis?.priorityScore
+);
 useEffect(() => {
   const fetchGrievance = async () => {
     const token = localStorage.getItem("token");
@@ -884,14 +1333,83 @@ if (error) {
       </div>
 
       {tab === "overview" && (
+        
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2 space-y-4">
             {/* AI Summary */}
             <AiInsightCard
-              title="AI-Generated Complaint Summary"
-              text={grievance.aiSummary || grievance.description || "No summary available."}
-              disclaimer="AI-generated summary • Verify with official records"
-            />
+  title="AI-Generated Complaint Summary"
+  text={
+    grievance.aiAnalysis?.summary ||
+    grievance.description ||
+    "No summary available."
+  }
+  disclaimer="AI-generated summary • Verify with official records"
+/>
+            {grievance?.aiAnalysis && (
+  <SectionCard title="AI Analysis">
+    <div className="grid grid-cols-2 gap-4">
+
+      <div>
+        <p className="text-xs text-slate-400">Category</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.category || "Not available"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Subcategory</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.subcategory || "Not available"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Department</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.department || "Not assigned"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Priority Score</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.priorityScore ?? "Not available"}/100
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-slate-400">Confidence</p>
+        <p className="font-medium text-slate-800">
+          {grievance.aiAnalysis.confidence != null
+            ? `${Math.round(grievance.aiAnalysis.confidence * 100)}%`
+            : "Not available"}
+        </p>
+      </div>
+      <div>
+  <p className="text-xs text-slate-400">
+    AI Priority Recommendation
+  </p>
+  <p className="font-semibold text-slate-800">
+    {aiPriority}
+  </p>
+</div>
+
+    </div>
+
+    {grievance.aiAnalysis.priorityReason && (
+      <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+        <p className="text-xs text-slate-400 mb-1">
+          AI Priority Reason
+        </p>
+
+        <p className="text-sm text-slate-700">
+          {grievance.aiAnalysis.priorityReason}
+        </p>
+      </div>
+    )}
+  </SectionCard>
+)}
 
             {/* Location Map */}
             <SectionCard title="Complaint Location" subtitle={
@@ -999,6 +1517,29 @@ if (error) {
                     </div>
                   </div>
                 ))}
+                {(grievance.timeline || []).length ? (
+                  [...(grievance.timeline || [])].reverse().map((item: any, i: number) => {
+                    const name = item.actor?.name || "System";
+                    const self = item.actor?._id === grievance.citizen?._id;
+                    return (
+                      <div key={i} className={`flex gap-3 ${self ? "flex-row-reverse" : ""}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${self ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600 dark:text-slate-400 dark:text-slate-500"}`}>
+                          {name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                        </div>
+                        <div className={`max-w-xs ${self ? "items-end" : "items-start"} flex flex-col`}>
+                          <div className={`px-3 py-2 rounded-xl text-sm ${self ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-800 dark:text-slate-200"}`}>
+                            {item.message || formatStatus(item.status)}
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {name} • {item.timestamp ? new Date(item.timestamp).toLocaleString() : "Time unavailable"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-slate-500">No communication history is available yet.</p>
+                )}
               </div>
               <div className="flex gap-2 border-t border-slate-100 pt-4">
                 <input value={message} onChange={e => setMessage(e.target.value)} placeholder="Type a reply..." className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
@@ -1054,11 +1595,23 @@ if (error) {
 
             <AiInsightCard
               title="AI-Assisted Evidence Assessment"
-              text={<>
-                <span className="text-green-600 font-semibold">✓</span> Location appears consistent with reported address<br />
-                <span className="text-amber-600 font-semibold">⏳</span> Resolution evidence not yet uploaded<br />
-                AI Confidence: <strong>Pending complete evidence</strong>
-              </>}
+              text={
+                <>
+                  <span className="text-slate-500 font-semibold">
+                    {grievance.resolution?.evidence?.length ? "✓" : "⏳"}
+                  </span>{" "}
+                  {grievance.resolution?.evidence?.length
+                    ? `${grievance.resolution.evidence.length} resolution evidence item(s) uploaded.`
+                    : "Resolution evidence has not been uploaded yet."}
+                  <br />
+                  AI Confidence:{" "}
+                  <strong>
+                    {grievance.aiAnalysis?.confidence != null
+                      ? `${Math.round(grievance.aiAnalysis.confidence * 100)}%`
+                      : "Not available"}
+                  </strong>
+                </>
+              }
               disclaimer="AI-assisted assessment — final decision remains with authorized officer"
             />
 
@@ -1177,19 +1730,58 @@ if (error) {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 export function CitizenNotifications() {
-  const notifs = [
-    { icon: "🔔", title: "Status Update", desc: "NV-1024 is now In Progress. Officer Rajesh assigned.", time: "2h ago", unread: true },
-    { icon: "✦", title: "AI Insight", desc: "Your grievance NV-1024 has been prioritized. Field visit scheduled.", time: "5h ago", unread: true },
-    { icon: "📩", title: "New Message", desc: "Officer Rajesh: Field visit scheduled for Aug 18.", time: "1d ago", unread: false },
-    { icon: "✓", title: "Resolved", desc: "NV-1019 marked as resolved. Rate your experience.", time: "3d ago", unread: false },
-    { icon: "⚠", title: "SLA Warning", desc: "NV-1023 approaching response deadline in 6 hours.", time: "4d ago", unread: false },
-  ];
+  const [grievances, setGrievances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getMyGrievances(token);
+        setGrievances(data.grievances || []);
+      } catch (error) {
+        console.error("Failed to load grievance notifications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
+  }, []);
+
+  const notifs = grievances
+    .flatMap((grievance) =>
+      (grievance.timeline || []).map((item: any) => ({
+        icon:
+          item.status === "RESOLVED" || item.status === "CLOSED"
+            ? "✓"
+            : item.status === "REOPENED"
+              ? "⚠"
+              : "🔔",
+        title: `${grievance.grievanceId} • ${formatStatus(item.status)}`,
+        desc: item.message || "Grievance status updated.",
+        time: item.timestamp
+          ? new Date(item.timestamp).toLocaleString()
+          : "Time unavailable",
+        unread: false,
+        createdAt: item.timestamp || grievance.createdAt,
+      }))
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
   return (
     <div className="p-6 space-y-5">
       <PageHeader title="Notifications" subtitle="Stay updated on your grievances and platform activity" />
       <SectionCard>
         <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
-          {notifs.map((n, i) => (
+          {loading ? (
+            <p className="py-6 text-sm text-slate-500">Loading notifications...</p>
+          ) : notifs.length ? notifs.map((n, i) => (
             <div key={i} className={`flex gap-4 py-4 hover:bg-slate-50 cursor-pointer rounded-lg px-2 transition-colors ${n.unread ? "bg-blue-50/30" : ""}`}>
               <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${n.unread ? "bg-blue-100" : "bg-slate-100 dark:bg-slate-700"}`}>{n.icon}</div>
               <div className="flex-1">
@@ -1201,7 +1793,9 @@ export function CitizenNotifications() {
               </div>
               <span className="text-xs text-slate-400 flex-shrink-0">{n.time}</span>
             </div>
-          ))}
+          )) : (
+            <p className="py-6 text-sm text-slate-500">No grievance notifications yet.</p>
+          )}
         </div>
       </SectionCard>
     </div>
