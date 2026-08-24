@@ -62,7 +62,7 @@ router.patch(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    
   ),
   updateGrievanceStatus
 );
@@ -73,7 +73,7 @@ router.post(
   authenticateUser,
   authorizeRoles(
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    
   ),
   assignGrievance
 );
@@ -85,7 +85,6 @@ router.post(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD"
   ),
   escalateGrievance
 );
@@ -98,7 +97,6 @@ router.post(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD",
     "CITIZEN"
   ),
   reopenGrievance

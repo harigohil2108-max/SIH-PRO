@@ -60,6 +60,117 @@ export async function register(
   return data;
 }
 
+export async function updateProfile(
+  name: string,
+  phone: string,
+  preferredLanguage: string
+) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Authentication required");
+  }
+
+  const response = await fetch(`${API_URL}/users/me`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      name,
+      phone,
+      preferredLanguage,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to update profile"
+    );
+  }
+
+  return data;
+}
+
+export async function updateLocation(
+  city: string,
+  district: string,
+  state: string,
+  pincode: string
+) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Authentication required");
+  }
+
+  const response = await fetch(
+    `${API_URL}/users/me/location`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        city,
+        district,
+        state,
+        pincode,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to update location"
+    );
+  }
+
+  return data;
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Authentication required");
+  }
+
+  const response = await fetch(
+    `${API_URL}/users/me/password`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to change password"
+    );
+  }
+
+  return data;
+}
+
 export async function getCurrentUser() {
   const token = localStorage.getItem("token");
 

@@ -3,6 +3,7 @@ import type { Role } from "./components/Shared";
 import AuthScreens from "./screens/AuthScreens";
 import { getCurrentUser } from "./screens/services/authService";
 import { getUnreadNotificationCount } from "./screens/services/notificationService";
+import Profile from "./screens/Profile";
 
 // Citizen screens
 import {
@@ -251,6 +252,11 @@ const SIDEBARS: Record<
       items: [
         {
           icon: "◯",
+          label: "Profile",
+          screen: "profile",
+        },
+        {
+          icon: "◯",
           label: "Settings",
           screen: "settings",
         },
@@ -419,7 +425,6 @@ function Topbar({
 
   return (
     <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-4 flex-shrink-0">
-
       {/* Sidebar toggle */}
       <button
         onClick={onToggle}
@@ -492,7 +497,6 @@ function Topbar({
 
       {/* Right side */}
       <div className="flex items-center gap-2 ml-auto">
-
         {/* Dark mode */}
         <button
           onClick={onToggleDark}
@@ -515,7 +519,12 @@ function Topbar({
               <circle cx="12" cy="12" r="5" />
               <line x1="12" y1="1" x2="12" y2="3" />
               <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line
+                x1="4.22"
+                y1="4.22"
+                x2="5.64"
+                y2="5.64"
+              />
               <line
                 x1="18.36"
                 y1="18.36"
@@ -687,6 +696,9 @@ function renderScreen(
       case "notifications":
         return <CitizenNotifications />;
 
+      case "profile":
+        return <Profile />;
+
       default:
         return (
           <PlaceholderScreen
@@ -723,6 +735,9 @@ function renderScreen(
 
       case "escalations":
         return <Escalations />;
+
+      case "profile":
+        return <Profile />;
 
       default:
         return (
@@ -767,6 +782,9 @@ function renderScreen(
     case "sla-management":
       return <SLAMonitoring />;
 
+    case "profile":
+      return <Profile />;
+
     default:
       return (
         <PlaceholderScreen
@@ -793,7 +811,8 @@ export default function App() {
 
   const [isDark, setIsDark] = useState(false);
 
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [unreadNotificationCount, setUnreadNotificationCount] =
+    useState(0);
 
   // Set dashboard role from authenticated user
   useEffect(() => {
@@ -915,7 +934,6 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
-
         <Sidebar
           role={role}
           open={sidebarOpen}
@@ -924,7 +942,6 @@ export default function App() {
         />
 
         <div className="flex flex-col flex-1 overflow-hidden">
-
           <Topbar
             role={role}
             user={user}
@@ -938,7 +955,9 @@ export default function App() {
             }
             onLogout={handleLogout}
             unreadNotificationCount={unreadNotificationCount}
-            onOpenNotifications={() => navigate("notifications")}
+            onOpenNotifications={() =>
+              navigate("notifications")
+            }
           />
 
           <main className="flex-1 overflow-y-auto bg-slate-100 dark:bg-slate-950">
@@ -948,7 +967,6 @@ export default function App() {
               navigate
             )}
           </main>
-
         </div>
       </div>
     </div>

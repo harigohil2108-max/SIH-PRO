@@ -145,23 +145,28 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await User.create({
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone?.trim() || null,
-      password: hashedPassword,
-      role: normalizedRole,
-      officialId:
-        normalizedRole === "OFFICER" || normalizedRole === "ADMIN"
-          ? officialId.trim().toUpperCase()
-          : null,
-      department: departmentId,
-      designation:
-        normalizedRole === "OFFICER"
-          ? designation.trim()
-          : null,
-      preferredLanguage: preferredLanguage || "en",
-    });
+    const userData = {
+  name,
+  email,
+  phone,
+  password: hashedPassword,
+  role: normalizedRole,
+  preferredLanguage: preferredLanguage || "en",
+};
+
+if (officialId?.trim()) {
+  userData.officialId = officialId.trim().toUpperCase();
+}
+
+if (departmentId) {
+  userData.department = departmentId;
+}
+
+if (designation?.trim()) {
+  userData.designation = designation.trim();
+}
+
+const user = await User.create(userData);
 
     const token = generateToken(user);
 
