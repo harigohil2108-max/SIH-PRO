@@ -63,12 +63,13 @@ export const createGrievance = async (req, res) => {
       ],
     });
     try {
-  const aiAnalysis = providedAiAnalysis || await analyzeGrievance({
+  const aiAnalysis = providedAiAnalysis || await analyzeGrievanceWithAI({
     title: grievance.title,
     description: grievance.description,
     category: grievance.category,
     subcategory: grievance.subcategory,
     location: grievance.location,
+    evidence: grievance.evidence,
   });
 
   grievance.aiAnalysis = {
@@ -619,6 +620,7 @@ export const analyzeGrievancePreview = async (req, res) => {
       category,
       subcategory,
       location,
+      evidence,
     } = req.body;
 
     if (!title || !description) {
@@ -634,6 +636,7 @@ export const analyzeGrievancePreview = async (req, res) => {
       category,
       subcategory,
       location,
+      evidence,
     });
     return res.json({
       success: true,
