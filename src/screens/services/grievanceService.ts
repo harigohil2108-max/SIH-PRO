@@ -34,7 +34,10 @@ export const createGrievance = async (
         longitude?: number;
       };
     };
-    evidence?: string[];
+    evidence?: {
+      url: string;
+      type: "IMAGE" | "VIDEO" | "DOCUMENT";
+    }[];
     duplicateMatches?: {
       grievance: string;
       similarity: number;
@@ -99,6 +102,7 @@ export const analyzeGrievance = async (
       city?: string;
       state?: string;
     };
+    evidence?: string[];
   },
   signal?: AbortSignal
 ) => {

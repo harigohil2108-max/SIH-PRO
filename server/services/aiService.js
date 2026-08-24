@@ -13,6 +13,7 @@ export const analyzeGrievance = async ({
   category,
   subcategory,
   location,
+  evidence,
 }) => {
   try {
     const prompt = `
@@ -36,6 +37,11 @@ LOCATION:
 ${location?.address || ""}
 ${location?.city || ""}
 ${location?.state || ""}
+
+ATTACHED EVIDENCE:
+${Array.isArray(evidence) && evidence.length
+  ? evidence.map((item) => typeof item === "string" ? item : `${item.type || "FILE"}: ${item.url || "unnamed"}`).join(", ")
+  : "None provided"}
 
 Determine:
 

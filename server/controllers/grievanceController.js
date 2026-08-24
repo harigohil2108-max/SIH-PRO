@@ -216,6 +216,7 @@ export const createGrievance = async (req, res) => {
           category: grievance.category,
           subcategory: grievance.subcategory,
           location: grievance.location,
+          evidence: grievance.evidence,
         });
 
       grievance.aiAnalysis = {
@@ -1093,6 +1094,7 @@ export const analyzeGrievancePreview =
         category,
         subcategory,
         location,
+        evidence,
       } = req.body;
 
       if (!title || !description) {
@@ -1110,6 +1112,7 @@ export const analyzeGrievancePreview =
           category,
           subcategory,
           location,
+          evidence,
         });
 
       return res.json({
