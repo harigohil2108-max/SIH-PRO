@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const AI_MODEL = "gemini-3.6-flash";
+const AI_MODEL = "gemini-3.5-flash";
 
 export const analyzeGrievance = async ({
   title,
@@ -72,7 +72,10 @@ const content = response.text;
 
 return JSON.parse(content);
   } catch (error) {
-    console.error("AI grievance analysis error:", error);
-    throw new Error("AI grievance analysis failed");
-  }
+  console.error("========== GEMINI ERROR ==========");
+  console.error(error);
+  console.error("==================================");
+
+  throw error;
+}
 };

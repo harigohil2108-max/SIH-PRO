@@ -643,9 +643,10 @@ export const analyzeGrievancePreview = async (req, res) => {
     console.error("AI grievance analysis error:", error);
 
     return res.status(500).json({
-      success: false,
-      message: "AI analysis failed",
-    });
+  success: false,
+  message: error.message || "AI analysis failed",
+  error: process.env.NODE_ENV === "production" ? undefined : String(error),
+});
   }
 };
 export const checkDuplicateGrievances = async (req, res) => {
