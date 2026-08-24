@@ -15,6 +15,7 @@ import {
   checkDuplicateGrievances,
 
 } from "./services/grievanceService";
+import { getCurrentUser } from "./services/authService";
 
 const CATEGORY_COLORS = [
   "#1e3a5f",
@@ -78,6 +79,11 @@ export function CitizenDashboard({
   const [grievances, setGrievances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUser().then((user) => setCurrentUser(user));
+  }, []);
 
   useEffect(() => {
     const fetchGrievances = async () => {
@@ -154,7 +160,7 @@ export function CitizenDashboard({
 
   return  (
     <div className="p-6 space-y-5">
-      <PageHeader title="Welcome back, Priya" subtitle="Your Voice. Our Responsibility.">
+      <PageHeader title={`Welcome back, ${currentUser?.name || "User"}`} subtitle="Your Voice. Our Responsibility.">
         <SecondaryBtn onClick={() => navigate("my-grievances")}>Track Grievances</SecondaryBtn>
         <PrimaryBtn onClick={() => navigate("submit-grievance")}><span>+</span> Submit New Grievance</PrimaryBtn>
       </PageHeader>
@@ -1236,6 +1242,12 @@ const [feedbackMessage, setFeedbackMessage] = useState("");
   const [grievance, setGrievance] = useState<any>(null);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+useEffect(() => {
+  getCurrentUser().then((user) => setCurrentUser(user));
+}, []);
+
 const getAIPriority = (score?: number) => {
   if (score == null) return "N/A";
   if (score >= 85) return "CRITICAL";
@@ -1490,6 +1502,21 @@ if (error) {
           <div className="col-span-2">
             <SectionCard title="Messages">
               <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
+                {[
+                  { sender: "Officer", name: "Rajesh Kumar", text: "We have received your complaint and will schedule a field visit shortly.", time: "Aug 16, 09:15 AM", self: false },
+                  { sender: "You", name: currentUser?.name || "You", text: "Thank you. The pothole has caused two accidents already. Please prioritize.", time: "Aug 16, 10:30 AM", self: true },
+                  { sender: "Officer", name: "Rajesh Kumar", text: "Noted. We have escalated the priority to High. Field visit scheduled for Aug 18.", time: "Aug 17, 09:00 AM", self: false },
+                ].map((msg, i) => (
+                  <div key={i} className={`flex gap-3 ${msg.self ? "flex-row-reverse" : ""}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${msg.self ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600 dark:text-slate-400 dark:text-slate-500"}`}>
+                      {msg.name.split(" ").map(n => n[0]).join("")}
+                    </div>
+                    <div className={`max-w-xs ${msg.self ? "items-end" : "items-start"} flex flex-col`}>
+                      <div className={`px-3 py-2 rounded-xl text-sm ${msg.self ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-800 dark:text-slate-200"}`}>{msg.text}</div>
+                      <p className="text-[10px] text-slate-400 mt-1">{msg.name} • {msg.time}</p>
+                    </div>
+                  </div>
+                ))}
                 {(grievance.timeline || []).length ? (
                   [...(grievance.timeline || [])].reverse().map((item: any, i: number) => {
                     const name = item.actor?.name || "System";
