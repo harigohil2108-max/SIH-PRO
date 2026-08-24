@@ -175,6 +175,10 @@ export const createGrievance = async (req, res) => {
       });
     }
 
+    // ========================================================
+    // 1. CREATE AND SAVE BASIC GRIEVANCE FIRST
+    // ========================================================
+
     const grievance = await Grievance.create({
       grievanceId: generateGrievanceId(),
 
@@ -203,9 +207,15 @@ export const createGrievance = async (req, res) => {
       ],
     });
 
-    // --------------------------------------------------------
-    // AI ANALYSIS
-    // --------------------------------------------------------
+    console.log(
+      `Grievance ${grievance.grievanceId} created successfully`
+    );
+
+    // ========================================================
+    // 2. AI ANALYSIS
+    //
+    // AI FAILURE MUST NEVER DELETE/BLOCK THE GRIEVANCE
+    // ========================================================
 
     try {
       const aiAnalysis =
@@ -216,8 +226,11 @@ export const createGrievance = async (req, res) => {
           category: grievance.category,
           subcategory: grievance.subcategory,
           location: grievance.location,
-          evidence: grievance.evidence,
         });
+
+      // ======================================================
+      // 3. SAVE AI ANALYSIS
+      // ======================================================
 
       grievance.aiAnalysis = {
         category: aiAnalysis.category,
@@ -228,6 +241,10 @@ export const createGrievance = async (req, res) => {
         confidence: aiAnalysis.confidence,
         summary: aiAnalysis.summary,
       };
+
+      // ======================================================
+      // 4. DETERMINE PRIORITY
+      // ======================================================
 
       if (aiAnalysis.priorityScore != null) {
         grievance.priority =
@@ -240,10 +257,9 @@ export const createGrievance = async (req, res) => {
                 : "LOW";
       }
 
-
-            // --------------------------------------------------------
-      // AUTOMATIC DEPARTMENT ROUTING
-      // --------------------------------------------------------
+      // ======================================================
+      // 5. FIND DEPARTMENT FROM AI RESULT
+      // ======================================================
 
       const department = await findDepartmentFromAI(
         aiAnalysis.department
@@ -252,33 +268,64 @@ export const createGrievance = async (req, res) => {
       if (department) {
         grievance.department = department._id;
 
-        // ------------------------------------------------------
-        // AUTOMATIC OFFICER ASSIGNMENT
-        // ------------------------------------------------------
+        console.log(
+          `Department identified: ${department.name}`
+        );
+
+        // ====================================================
+        // 6. AUTOMATIC OFFICER ASSIGNMENT
+        // ====================================================
 
         const officer = await autoAssignOfficer(
           grievance,
           department
         );
 
-                  if (officer) {
-            grievance.assignedOfficer = officer._id;
-            grievance.status = "ASSIGNED";
+        if (officer) {
+          grievance.assignedOfficer = officer._id;
 
-            grievance.timeline.push({
-              status: "ASSIGNED",
-              message: `Automatically assigned to ${officer.name} in ${department.name}`,
-              actor: req.user._id,
-            });
+          grievance.status = "ASSIGNED";
 
+          grievance.timeline.push({
+            status: "ASSIGNED",
+            message: `Automatically assigned to ${officer.name} in ${department.name}`,
+            actor: req.user._id,
+          });
+
+          console.log(
+            `Grievance ${grievance.grievanceId} assigned to ${officer.name}`
+          );
+
+          // ==================================================
+          // 7. NOTIFY ASSIGNED OFFICER
+          // ==================================================
+
+          try {
             await Notification.create({
               user: officer._id,
+
               title: "New Grievance Assigned",
+
               message: `Grievance ${grievance.grievanceId} has been assigned to you.`,
+
               type: "GRIEVANCE_ASSIGNED",
+
               relatedGrievance: grievance._id,
             });
-          } else {
+          } catch (notificationError) {
+            console.error(
+              "Officer notification failed:",
+              notificationError.message
+            );
+
+            // Notification failure must not
+            // break grievance creation.
+          }
+        } else {
+          console.log(
+            `No active officer available for ${department.name}`
+          );
+
           grievance.timeline.push({
             status: "SUBMITTED",
             message: `Routed to ${department.name}. Awaiting officer assignment.`,
@@ -289,45 +336,88 @@ export const createGrievance = async (req, res) => {
         console.warn(
           `No matching department found for AI department: ${aiAnalysis.department}`
         );
+
+        grievance.timeline.push({
+          status: "SUBMITTED",
+          message:
+            "AI analysis completed, but no matching department was found.",
+          actor: req.user._id,
+        });
       }
+
+      // ======================================================
+      // 8. SAVE AI / ROUTING / ASSIGNMENT CHANGES
+      // ======================================================
 
       await grievance.save();
 
-      console.log("AI grievance analysis completed");
+      console.log(
+        `AI processing completed for ${grievance.grievanceId}`
+      );
     } catch (aiError) {
+      // ======================================================
+      // IMPORTANT:
+      // AI FAILURE MUST NOT FAIL GRIEVANCE CREATION
+      // ======================================================
+
       console.error(
         "AI analysis skipped:",
         aiError.message
       );
+
+      console.log(
+        `Grievance ${grievance.grievanceId} will continue without AI analysis`
+      );
     }
 
-    // --------------------------------------------------------
-    // CREATE NOTIFICATION FOR CITIZEN
-    // --------------------------------------------------------
+    // ========================================================
+    // 9. NOTIFY CITIZEN
+    // ========================================================
 
-    await Notification.create({
-      user: req.user._id,
+    try {
+      await Notification.create({
+        user: req.user._id,
 
-      title: "Grievance Submitted",
+        title: "Grievance Submitted",
 
-      message: `Your grievance ${grievance.grievanceId} has been submitted successfully.`,
+        message: `Your grievance ${grievance.grievanceId} has been submitted successfully.`,
 
-      type: "GRIEVANCE_SUBMITTED",
+        type: "GRIEVANCE_SUBMITTED",
 
-      relatedGrievance: grievance._id,
-    });
+        relatedGrievance: grievance._id,
+      });
+    } catch (notificationError) {
+      console.error(
+        "Citizen notification failed:",
+        notificationError.message
+      );
 
-    res.status(201).json({
+      // Notification failure must not
+      // prevent successful grievance creation.
+    }
+
+    // ========================================================
+    // 10. RETURN SUCCESS
+    // ========================================================
+
+    return res.status(201).json({
       success: true,
+
       message: "Grievance created successfully",
+
       grievance,
     });
   } catch (error) {
-    console.error("Create grievance error:", error);
+    console.error(
+      "Create grievance error:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Server error while creating grievance",
+
+      message:
+        "Server error while creating grievance",
     });
   }
 };
