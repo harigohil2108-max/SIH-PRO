@@ -1,4 +1,5 @@
-const API_URL = "http://localhost:5000/api";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export const getMyGrievances = async (token: string) => {
   const response = await fetch(`${API_URL}/grievances`, {
@@ -33,7 +34,10 @@ export const createGrievance = async (
         longitude?: number;
       };
     };
-    evidence?: string[];
+    evidence?: {
+      url: string;
+      type: "IMAGE" | "VIDEO" | "DOCUMENT";
+    }[];
     duplicateMatches?: {
       grievance: string;
       similarity: number;
@@ -86,6 +90,73 @@ export const getGrievanceById = async (
   return data;
 };
 
+export const escalateGrievance = async (
+  token: string,
+  grievanceId: string,
+  reason: string
+) => {
+  const response = await fetch(`${API_URL}/grievances/${grievanceId}/escalate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to escalate grievance");
+  }
+
+  return data;
+};
+
+export const sendGrievanceMessage = async (
+  token: string,
+  grievanceId: string,
+  message: string
+) => {
+  const response = await fetch(`${API_URL}/grievances/${grievanceId}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to send message");
+  }
+
+  return data;
+};
+
+export const addGrievanceEvidence = async (
+  token: string,
+  grievanceId: string,
+  evidence: { name: string; type: "IMAGE" | "VIDEO" | "DOCUMENT" }
+) => {
+  const response = await fetch(`${API_URL}/grievances/${grievanceId}/evidence`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(evidence),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to add evidence");
+  }
+  return data;
+};
+
 export const analyzeGrievance = async (
   token: string,
   grievanceData: {
@@ -98,6 +169,7 @@ export const analyzeGrievance = async (
       city?: string;
       state?: string;
     };
+    evidence?: string[];
   },
   signal?: AbortSignal
 ) => {
@@ -209,5 +281,15 @@ export const reopenGrievance = async (
     throw new Error(data.message || "Failed to reopen grievance");
   }
 
+  return data;
+};
+
+export const confirmGrievanceResolution = async (token: string, grievanceId: string) => {
+  const response = await fetch(`${API_URL}/grievances/${grievanceId}/confirm-resolution`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Failed to accept resolution");
   return data;
 };

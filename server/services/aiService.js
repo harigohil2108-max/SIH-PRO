@@ -1,11 +1,10 @@
-import "dotenv/config";
-import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { generateAIContent } from "./groqService.js";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
-
-const AI_MODEL = "gemini-3.6-flash";
+const serverDirectory = path.dirname(fileURLToPath(import.meta.url)).replace(/\\services$/, "");
+dotenv.config({ path: path.join(serverDirectory, ".env") });
 
 export const analyzeGrievance = async ({
   title,
@@ -13,6 +12,7 @@ export const analyzeGrievance = async ({
   category,
   subcategory,
   location,
+  evidence,
 }) => {
   try {
     const prompt = `
@@ -37,6 +37,11 @@ ${location?.address || ""}
 ${location?.city || ""}
 ${location?.state || ""}
 
+ATTACHED EVIDENCE:
+${Array.isArray(evidence) && evidence.length
+  ? evidence.map((item) => typeof item === "string" ? item : `${item.type || "FILE"}: ${item.url || "unnamed"}`).join(", ")
+  : "None provided"}
+
 Determine:
 
 1. The most appropriate category.
@@ -60,19 +65,14 @@ Return ONLY valid JSON in this exact structure:
 }
 `;
 
-    const response = await ai.models.generateContent({
-  model: AI_MODEL,
-  contents: prompt,
-  config: {
-    responseMimeType: "application/json",
-  },
-});
+    const content = await generateAIContent(prompt);
 
-const content = response.text;
-
-return JSON.parse(content);
+    return JSON.parse(content);
   } catch (error) {
-    console.error("AI grievance analysis error:", error);
-    throw new Error("AI grievance analysis failed");
-  }
+  console.error("========== GROQ ERROR ==========");
+  console.error(error);
+  console.error("==================================");
+
+  throw error;
+}
 };

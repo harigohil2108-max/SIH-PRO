@@ -2,7 +2,6 @@ import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
-import { readFileSync } from "node:fs";
 
 import siteConfiguration from './.figma/make/site.json'
 
@@ -10,10 +9,7 @@ import siteConfiguration from './.figma/make/site.json'
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
-  const httpsConfig = {
-    key: readFileSync(path.resolve(__dirname, 'localhost+3-key.pem')),
-    cert: readFileSync(path.resolve(__dirname, 'localhost+3.pem')),
-  }
+
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
     build: {
@@ -37,16 +33,14 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
-      https: httpsConfig,
       watch: { ignored: ['**/.figma/**'] },
     },
     preview: {
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
-      https: httpsConfig,
     },
   }
-});
+})
 
 type FigmaSiteConfiguration = {
   title?: string

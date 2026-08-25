@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
   StatusBadge, PriorityBadge, Timeline, ChartLegend, FilterChip, SlaIndicator, AiBadge,
 } from "../components/Shared";
 import MapSvg from "../components/MapSvg";
+import { getCurrentUser } from "./services/authService";
 
 const trendData = [
   { month: "Jan", submitted: 85, resolved: 62 }, { month: "Feb", submitted: 98, resolved: 74 },
@@ -44,9 +45,17 @@ const allGrievances = [
 
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 export function AdminDashboard({ navigate }: { navigate: (s: string) => void }) {
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((user) => setCurrentUser(user))
+      .catch(() => setCurrentUser(null));
+  }, []);
+
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Welcome back, Administrator" subtitle="Admin Command Center • Nivara Core Management Platform">
+      <PageHeader title={`Welcome back, ${currentUser?.name || "Administrator"}`} subtitle="Admin Command Center • Nivara Core Management Platform">
         <SecondaryBtn onClick={() => navigate("reports")}>Generate Report</SecondaryBtn>
         <PrimaryBtn onClick={() => navigate("all-grievances")}><span>+</span> System Overview</PrimaryBtn>
       </PageHeader>
@@ -175,6 +184,22 @@ export function AllGrievances({ navigate }: { navigate: (s: string) => void }) {
   const toggleChip = (c: string) => setActiveChips(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
 
   const chips = ["Critical", "High", "SLA Breached", "Duplicate", "Water Supply", "Roads", "Escalated"];
+  const visibleGrievances = allGrievances.filter((grievance) => {
+    const matchesSearch = !search ||
+      grievance.title.toLowerCase().includes(search.toLowerCase()) ||
+      grievance.id.toLowerCase().includes(search.toLowerCase()) ||
+      grievance.cat.toLowerCase().includes(search.toLowerCase()) ||
+      grievance.officer.toLowerCase().includes(search.toLowerCase());
+
+    const matchesChips = activeChips.every((chip) => {
+      if (chip === "SLA Breached") return grievance.sla === "breach";
+      if (chip === "Duplicate") return grievance.dup;
+      if (chip === "Escalated") return grievance.status === "Escalated";
+      return grievance.priority === chip || grievance.cat === chip;
+    });
+
+    return matchesSearch && matchesChips;
+  });
 
   return (
     <div className="p-6 space-y-5">
@@ -206,7 +231,7 @@ export function AllGrievances({ navigate }: { navigate: (s: string) => void }) {
 
       <SectionCard>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-slate-500 dark:text-slate-500">Showing <strong>{allGrievances.length}</strong> grievances</p>
+          <p className="text-xs text-slate-500 dark:text-slate-500">Showing <strong>{visibleGrievances.length}</strong> grievances</p>
           <div className="flex gap-2 text-xs text-slate-500 dark:text-slate-500">
             <span>Sort by: <button className="text-blue-600 font-medium">AI Score ∨</button></span>
           </div>
@@ -220,7 +245,7 @@ export function AllGrievances({ navigate }: { navigate: (s: string) => void }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-            {allGrievances.filter(g => !search || g.title.toLowerCase().includes(search.toLowerCase()) || g.id.includes(search)).map(r => (
+            {visibleGrievances.map(r => (
               <tr key={r.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate("grievance-detail")}>
                 <td className="py-2.5 pr-2 font-mono text-xs text-blue-600 font-semibold">{r.id}</td>
                 <td className="py-2.5 pr-2 text-slate-800 font-medium text-xs max-w-28 truncate">{r.title}</td>
@@ -250,6 +275,11 @@ export function AllGrievances({ navigate }: { navigate: (s: string) => void }) {
             ))}
           </tbody>
         </table>
+        {visibleGrievances.length === 0 && (
+          <p className="py-8 text-center text-sm text-slate-500">
+            No grievances match the current search and filters.
+          </p>
+        )}
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 dark:text-slate-500">
           <span>Page 1 of 48</span>
           <div className="flex gap-1">
@@ -330,7 +360,7 @@ export function Departments() {
 }
 
 // ─── Geographic Intelligence (Admin) ─────────────────────────────────────────
-export function AdminGeoIntelligence() {
+export function AdminGeoIntelligence({ navigate }: { navigate: (screen: string) => void }) {
   const [mapMode, setMapMode] = useState<"markers" | "heatmap" | "clusters">("heatmap");
   const [selectedZone, setSelectedZone] = useState<string | null>("Zone 4");
 
@@ -338,7 +368,7 @@ export function AdminGeoIntelligence() {
     <div className="p-6 space-y-4">
       <PageHeader title="Geographic Intelligence" subtitle="AI-powered spatial analysis — complaint density, hotspots and trend overlays">
         <SecondaryBtn>Export Map</SecondaryBtn>
-        <PrimaryBtn>Generate Zone Report</PrimaryBtn>
+        <PrimaryBtn onClick={() => navigate("reports")}>Generate Zone Report</PrimaryBtn>
       </PageHeader>
 
       <div className="flex gap-3">
@@ -406,7 +436,7 @@ export function AdminGeoIntelligence() {
                   </div>
                 ))}
               </div>
-              <button className="w-full text-xs bg-red-600 text-white rounded-lg py-1.5 hover:bg-red-700">View Zone Grievances</button>
+              <button onClick={() => navigate("all-grievances")} className="w-full text-xs bg-red-600 text-white rounded-lg py-1.5 hover:bg-red-700">View Zone Grievances</button>
             </SectionCard>
           )}
 

@@ -118,7 +118,12 @@ export function AiInsightCard({ title, text, disclaimer, actions }: {
 // ─── Buttons ──────────────────────────────────────────────────────────────────
 export function PrimaryBtn({ children, onClick, className = "" }: { children: ReactNode; onClick?: () => void; className?: string }) {
   return (
-    <button onClick={onClick} className={`px-4 py-2 text-sm font-medium bg-[#0f2b4e] text-white rounded-lg hover:bg-[#1a3a5c] transition-colors flex items-center gap-1.5 ${className}`}>
+    <button
+      onClick={onClick}
+      data-interactive={onClick ? "true" : undefined}
+      data-action-fallback={onClick ? undefined : "true"}
+      className={`px-4 py-2 text-sm font-medium bg-[#0f2b4e] text-white rounded-lg hover:bg-[#1a3a5c] transition-colors flex items-center gap-1.5 ${className}`}
+    >
       {children}
     </button>
   );
@@ -126,7 +131,12 @@ export function PrimaryBtn({ children, onClick, className = "" }: { children: Re
 
 export function SecondaryBtn({ children, onClick, className = "" }: { children: ReactNode; onClick?: () => void; className?: string }) {
   return (
-    <button onClick={onClick} className={`px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${className}`}>
+    <button
+      onClick={onClick}
+      data-interactive={onClick ? "true" : undefined}
+      data-action-fallback={onClick ? undefined : "true"}
+      className={`px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${className}`}
+    >
       {children}
     </button>
   );
@@ -134,7 +144,12 @@ export function SecondaryBtn({ children, onClick, className = "" }: { children: 
 
 export function GhostBtn({ children, onClick, className = "" }: { children: ReactNode; onClick?: () => void; className?: string }) {
   return (
-    <button onClick={onClick} className={`px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline transition-colors ${className}`}>
+    <button
+      onClick={onClick}
+      data-interactive={onClick ? "true" : undefined}
+      data-action-fallback={onClick ? undefined : "true"}
+      className={`px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline transition-colors ${className}`}
+    >
       {children}
     </button>
   );
@@ -172,6 +187,8 @@ export function FilterChip({ label, active, onClick }: { label: string; active?:
   return (
     <button
       onClick={onClick}
+      data-interactive={onClick ? "true" : undefined}
+      data-action-fallback={onClick ? undefined : "true"}
       className={`px-3 py-1 text-xs rounded-full border font-medium transition-colors ${
         active
           ? "bg-blue-600 text-white border-blue-600"

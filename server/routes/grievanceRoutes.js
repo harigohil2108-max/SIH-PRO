@@ -7,10 +7,13 @@ import {
   createGrievance,
   getMyGrievances,
   getGrievanceById,
+  addGrievanceMessage,
+  addGrievanceEvidence,
   updateGrievanceStatus,
   assignGrievance,
   escalateGrievance,
   reopenGrievance,
+  confirmGrievanceResolution,
   submitFeedback,
   analyzeGrievancePreview,
   checkDuplicateGrievances,
@@ -62,7 +65,7 @@ router.patch(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    
   ),
   updateGrievanceStatus
 );
@@ -73,21 +76,35 @@ router.post(
   authenticateUser,
   authorizeRoles(
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    
   ),
   assignGrievance
 );
 
-// Officer / Admin / Department Head can escalate
+// Citizens can escalate their own grievances; staff can escalate within role access.
 router.post(
   "/:id/escalate",
   authenticateUser,
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    "CITIZEN",
   ),
   escalateGrievance
+);
+
+router.post(
+  "/:id/messages",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN", "DEPARTMENT_HEAD"),
+  addGrievanceMessage
+);
+
+router.post(
+  "/:id/evidence",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN", "DEPARTMENT_HEAD"),
+  addGrievanceEvidence
 );
 
 // Citizen can reopen their own grievance
@@ -98,10 +115,16 @@ router.post(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD",
     "CITIZEN"
   ),
   reopenGrievance
+);
+
+router.post(
+  "/:id/confirm-resolution",
+  authenticateUser,
+  authorizeRoles("CITIZEN"),
+  confirmGrievanceResolution
 );
 
 // Citizen can submit feedback

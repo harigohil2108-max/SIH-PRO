@@ -1,11 +1,10 @@
-import "dotenv/config";
-import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { generateAIContent } from "./groqService.js";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
-
-const AI_MODEL = "gemini-3.6-flash";
+const serverDirectory = path.dirname(fileURLToPath(import.meta.url)).replace(/\\services$/, "");
+dotenv.config({ path: path.join(serverDirectory, ".env") });
 
 export const findDuplicateGrievances = async (
   newGrievance,
@@ -66,15 +65,7 @@ Rules:
 - A score of 0.75 or higher means the grievances are likely duplicates.
 `;
 
-    const response = await ai.models.generateContent({
-      model: AI_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const content = response.text;
+    const content = await generateAIContent(prompt);
 
     const parsed = JSON.parse(content);
 
