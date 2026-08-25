@@ -145,6 +145,33 @@ const grievanceSchema = new mongoose.Schema(
       },
     },
 
+    messages: [
+  {
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    senderRole: {
+      type: String,
+      enum: ["CITIZEN", "OFFICER", "ADMIN"],
+      required: true,
+    },
+
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+
     timeline: [
       {
         status: String,
@@ -162,6 +189,33 @@ const grievanceSchema = new mongoose.Schema(
         },
       },
     ],
+
+    messages: [
+  {
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    senderRole: {
+      type: String,
+      enum: ["CITIZEN", "OFFICER", "ADMIN"],
+      required: true,
+    },
+
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
 
     resolution: {
       message: String,

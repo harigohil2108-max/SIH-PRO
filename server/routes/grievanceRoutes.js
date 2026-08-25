@@ -14,6 +14,8 @@ import {
   submitFeedback,
   analyzeGrievancePreview,
   checkDuplicateGrievances,
+  getGrievanceMessages,
+  sendGrievanceMessage,
 } from "../controllers/grievanceController.js";
 
 const router = express.Router();
@@ -45,10 +47,33 @@ router.post(
   checkDuplicateGrievances
 );
 
+// ============================================================
+// GRIEVANCE COMMUNICATION
+//
+
 router.get(
   "/:id",
   authenticateUser,
   getGrievanceById
+);
+
+
+// ============================================================
+// GRIEVANCE COMMUNICATION
+// ============================================================
+
+router.get(
+  "/:id/messages",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN"),
+  getGrievanceMessages
+);
+
+router.post(
+  "/:id/messages",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN"),
+  sendGrievanceMessage
 );
 
 // ============================================================

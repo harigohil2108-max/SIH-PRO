@@ -18,42 +18,109 @@ const generateGrievanceId = () => {
 const normalizeDepartmentName = (value = "") =>
   value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-const findDepartmentFromAI = async (aiDepartment) => {
-  if (!aiDepartment) {
-    return null;
-  }
-
+const findDepartmentFromAI = async (
+  aiDepartment,
+  aiCategory,
+  aiSubcategory
+) => {
   const departments = await Department.find({
     isActive: true,
   }).lean();
 
-  const aiName = normalizeDepartmentName(aiDepartment);
+  if (departments.length === 0) {
+    return null;
+  }
 
-  // First: exact match against name or code
+  const normalize = (value = "") =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const aiTerms = [
+    ...normalize(aiDepartment),
+    ...normalize(aiCategory),
+    ...normalize(aiSubcategory),
+  ];
+
+  if (aiTerms.length === 0) {
+    return null;
+  }
+
+  // ------------------------------------------------------------
+  // 1. Exact match against department name/code
+  // ------------------------------------------------------------
+
+  const normalizedAI = normalizeDepartmentName(
+    aiDepartment || ""
+  );
+
   let department = departments.find(
     (dept) =>
-      normalizeDepartmentName(dept.name) === aiName ||
-      normalizeDepartmentName(dept.code) === aiName
+      normalizeDepartmentName(dept.name) === normalizedAI ||
+      normalizeDepartmentName(dept.code) === normalizedAI
   );
 
   if (department) {
     return department;
   }
 
-  // Second: allow AI to return a slightly longer/shorter department name
-  department = departments.find((dept) => {
-    const departmentName = normalizeDepartmentName(dept.name);
-    const departmentCode = normalizeDepartmentName(dept.code);
+  // ------------------------------------------------------------
+  // 2. Match using meaningful words from AI analysis
+  // ------------------------------------------------------------
 
-    return (
-      aiName.includes(departmentName) ||
-      departmentName.includes(aiName) ||
-      aiName.includes(departmentCode) ||
-      departmentCode.includes(aiName)
+  const stopWords = new Set([
+    "department",
+    "dept",
+    "authority",
+    "corporation",
+    "municipal",
+    "municipality",
+    "board",
+    "and",
+    "the",
+    "of",
+    "for",
+    "public",
+  ]);
+
+  const meaningfulTerms = aiTerms.filter(
+    (term) => term.length >= 4 && !stopWords.has(term)
+  );
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const dept of departments) {
+    const departmentTerms = [
+      ...normalize(dept.name),
+      ...normalize(dept.code),
+    ].filter(
+      (term) => term.length >= 4 && !stopWords.has(term)
     );
-  });
 
-  return department || null;
+    let score = 0;
+
+    for (const aiTerm of meaningfulTerms) {
+      for (const deptTerm of departmentTerms) {
+        if (
+          aiTerm === deptTerm ||
+          aiTerm.includes(deptTerm) ||
+          deptTerm.includes(aiTerm)
+        ) {
+          score += 1;
+        }
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = dept;
+    }
+  }
+
+  return bestMatch;
 };
 
 /*
@@ -262,7 +329,9 @@ export const createGrievance = async (req, res) => {
       // ======================================================
 
       const department = await findDepartmentFromAI(
-        aiAnalysis.department
+        aiAnalysis.department,
+        aiAnalysis.category,
+        aiAnalysis.subcategory
       );
 
       if (department) {
@@ -1366,3 +1435,142 @@ export const checkDuplicateGrievances =
       });
     }
   };
+
+  // ============================================================
+// GET GRIEVANCE MESSAGES
+// GET /api/grievances/:id/messages
+// ============================================================
+
+export const getGrievanceMessages = async (req, res) => {
+  try {
+    const grievance = await Grievance.findById(req.params.id)
+      .populate("messages.sender", "name email role");
+
+    if (!grievance) {
+      return res.status(404).json({
+        success: false,
+        message: "Grievance not found",
+      });
+    }
+
+    // Citizen can only access their own grievance
+    if (
+      req.user.role === "CITIZEN" &&
+      grievance.citizen.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only access messages from your own grievance",
+      });
+    }
+
+    // Officer must belong to the grievance department
+    if (req.user.role === "OFFICER") {
+      const accessError = checkOfficerDepartmentAccess(
+        req,
+        grievance
+      );
+
+      if (accessError) {
+        return res.status(accessError.status).json({
+          success: false,
+          message: accessError.message,
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      messages: grievance.messages || [],
+    });
+  } catch (error) {
+    console.error("Get grievance messages error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching messages",
+    });
+  }
+};
+
+// ============================================================
+// SEND GRIEVANCE MESSAGE
+// POST /api/grievances/:id/messages
+// ============================================================
+
+export const sendGrievanceMessage = async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Message cannot be empty",
+      });
+    }
+
+    const grievance = await Grievance.findById(req.params.id);
+
+    if (!grievance) {
+      return res.status(404).json({
+        success: false,
+        message: "Grievance not found",
+      });
+    }
+
+    // Citizen can only message on their own grievance
+    if (
+      req.user.role === "CITIZEN" &&
+      grievance.citizen.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only message on your own grievance",
+      });
+    }
+
+    // Officer must belong to the grievance department
+    if (req.user.role === "OFFICER") {
+      const accessError = checkOfficerDepartmentAccess(
+        req,
+        grievance
+      );
+
+      if (accessError) {
+        return res.status(accessError.status).json({
+          success: false,
+          message: accessError.message,
+        });
+      }
+    }
+
+    grievance.messages.push({
+      sender: req.user._id,
+      senderRole: req.user.role,
+      message: message.trim(),
+      timestamp: new Date(),
+    });
+
+    await grievance.save();
+
+    const updatedGrievance = await Grievance.findById(
+      grievance._id
+    ).populate("messages.sender", "name email role");
+
+    return res.status(201).json({
+      success: true,
+      message: "Message sent successfully",
+      sentMessage:
+        updatedGrievance.messages[
+          updatedGrievance.messages.length - 1
+        ],
+    });
+  } catch (error) {
+    console.error("Send grievance message error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while sending message",
+    });
+  }
+};

@@ -17,6 +17,7 @@ import {
 // Officer screens
 import {
   OfficerDashboard,
+  OfficerMyAssignments,
   PriorityQueue,
   OfficerGrievanceDetail,
   GeoIntelligence,
@@ -719,13 +720,18 @@ function renderScreen(
         return <PriorityQueue navigate={navigate} />;
 
       case "my-assignments":
-        return <PriorityQueue navigate={navigate} />;
+  return <OfficerMyAssignments navigate={navigate} />;
 
       case "all-grievances":
         return <AllGrievances navigate={navigate} />;
 
       case "grievance-detail":
-        return <OfficerGrievanceDetail navigate={navigate} />;
+        return (
+          <OfficerGrievanceDetail
+            navigate={navigate}
+            grievanceId={grievanceId}
+          />
+        );
 
       case "geo-intelligence":
         return <GeoIntelligence />;

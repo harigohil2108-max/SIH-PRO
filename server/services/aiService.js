@@ -1,11 +1,24 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const serverDirectory = path.dirname(fileURLToPath(import.meta.url)).replace(/\\services$/, "");
+dotenv.config({ path: path.join(serverDirectory, ".env") });
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const AI_MODEL = "gemini-3.5-flash";
+const AI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+
+const isTemporaryAIError = (error) => {
+  const status = error?.status || error?.cause?.status;
+  const code = error?.cause?.code;
+  return status === 429 || status >= 500 || code === "UND_ERR_HEADERS_TIMEOUT";
+};
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export const analyzeGrievance = async ({
   title,
