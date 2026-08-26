@@ -47,14 +47,26 @@ export function AiBadge({ label = "AI-assisted" }: { label?: string }) {
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-export function KpiCard({ label, value, trend, trendUp }: { label: string; value: string; trend: string; trendUp: boolean }) {
+export function KpiCard({
+  label,
+  value,
+  trend,
+  trendUp = true,
+}: {
+  label: string;
+  value: string;
+  trend?: string;
+  trendUp?: boolean;
+}) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex-1 min-w-0 shadow-sm">
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{label}</span>
-        <span className={`text-xs font-semibold flex items-center gap-0.5 ${trendUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
-          {trendUp ? "↑" : "↓"} {trend}
-        </span>
+        {trend && (
+          <span className={`text-xs font-semibold flex items-center gap-0.5 ${trendUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+            {trend}
+          </span>
+        )}
       </div>
       <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</div>
     </div>

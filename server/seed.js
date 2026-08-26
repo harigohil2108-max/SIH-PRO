@@ -90,20 +90,7 @@ const seedDatabase = async () => {
       preferredLanguage: "en",
     });
 
-    // ========================================================
-    // DEPARTMENT HEAD
-    // ========================================================
-
-    const departmentHead = await User.create({
-      name: "PWD Department Head",
-      email: "head@nivara.local",
-      phone: "9000000002",
-      password,
-      role: "DEPARTMENT_HEAD",
-      department: pwd._id,
-      designation: "Department Head",
-      preferredLanguage: "en",
-    });
+    
 
     // ========================================================
     // OFFICER

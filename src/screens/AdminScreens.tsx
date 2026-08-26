@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
   StatusBadge, PriorityBadge, Timeline, ChartLegend, FilterChip, SlaIndicator, AiBadge,
 } from "../components/Shared";
 import MapSvg from "../components/MapSvg";
+import { getCurrentUser } from "./services/authService";
+import {
+  getMyGrievances,
+} from "../services/grievanceService";
+import {
+  getDepartments,
+} from "../services/departmentService";
 
 const trendData = [
   { month: "Jan", submitted: 85, resolved: 62 }, { month: "Feb", submitted: 98, resolved: 74 },
@@ -43,124 +50,1096 @@ const allGrievances = [
 ];
 
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
-export function AdminDashboard({ navigate }: { navigate: (s: string) => void }) {
+export function AdminDashboard({
+  navigate,
+}: {
+  navigate: (s: string) => void;
+}) {
+  const [currentUser, setCurrentUser] = useState<{
+    name: string;
+  } | null>(null);
+
+ const [grievances, setGrievances] = useState<any[]>([]);
+const [departments, setDepartments] = useState<any[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+  useEffect(() => {
+    getCurrentUser()
+      .then((user) => setCurrentUser(user))
+      .catch(() => setCurrentUser(null));
+  }, []);
+
+  useEffect(() => {
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const [grievanceResponse, departmentResponse] =
+        await Promise.all([
+          getMyGrievances(token),
+          getDepartments(token),
+        ]);
+
+      const grievanceItems = Array.isArray(
+        grievanceResponse
+      )
+        ? grievanceResponse
+        : Array.isArray(
+            grievanceResponse?.grievances
+          )
+        ? grievanceResponse.grievances
+        : Array.isArray(
+            grievanceResponse?.data
+          )
+        ? grievanceResponse.data
+        : [];
+
+      const departmentItems =
+        Array.isArray(
+          departmentResponse?.departments
+        )
+          ? departmentResponse.departments
+          : [];
+
+      setGrievances(grievanceItems);
+      setDepartments(departmentItems);
+    } catch (err) {
+      console.error(
+        "Failed to load admin dashboard data:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load dashboard data"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadDashboardData();
+}, []);
+
+  // ─────────────────────────────────────────────────────────────
+  // BASIC COUNTS
+  // ─────────────────────────────────────────────────────────────
+
+  const totalGrievances = grievances.length;
+
+  const activeGrievances = grievances.filter(
+    (g) =>
+      ![
+        "RESOLVED",
+        "CLOSED",
+        "REJECTED",
+      ].includes(g.status)
+  ).length;
+
+  const resolvedGrievances = grievances.filter(
+    (g) =>
+      g.status === "RESOLVED" ||
+      g.status === "CLOSED"
+  ).length;
+
+  const resolutionRate =
+    totalGrievances > 0
+      ? (
+          (resolvedGrievances /
+            totalGrievances) *
+          100
+        ).toFixed(1)
+      : "0.0";
+
+  // ─────────────────────────────────────────────────────────────
+  // SLA
+  // ─────────────────────────────────────────────────────────────
+
+  const slaBreached = grievances.filter(
+    (g) => {
+      if (g?.sla?.breached === true) {
+        return true;
+      }
+
+      if (!g?.sla?.dueAt) {
+        return false;
+      }
+
+      return (
+        new Date(g.sla.dueAt).getTime() <
+        Date.now()
+      );
+    }
+  ).length;
+
+  const slaWithDeadline = grievances.filter(
+    (g) => g?.sla?.dueAt
+  );
+
+  const slaCompliant =
+    slaWithDeadline.length > 0
+      ? (
+          ((slaWithDeadline.length -
+            slaBreached) /
+            slaWithDeadline.length) *
+          100
+        ).toFixed(1)
+      : "0.0";
+
+  // ─────────────────────────────────────────────────────────────
+  // AVERAGE RESOLUTION TIME
+  // ─────────────────────────────────────────────────────────────
+
+  const resolvedWithDates =
+    grievances.filter(
+      (g) =>
+        (g.status === "RESOLVED" ||
+          g.status === "CLOSED") &&
+        g.createdAt &&
+        (g?.resolution?.resolvedAt ||
+          g.updatedAt)
+    );
+
+  let averageResolutionDays = 0;
+
+  if (resolvedWithDates.length > 0) {
+    const totalResolutionTime =
+      resolvedWithDates.reduce(
+        (total, grievance) => {
+          const created = new Date(
+            grievance.createdAt
+          ).getTime();
+
+          const resolved = new Date(
+            grievance?.resolution
+              ?.resolvedAt ||
+              grievance.updatedAt
+          ).getTime();
+
+          if (
+            Number.isNaN(created) ||
+            Number.isNaN(resolved) ||
+            resolved < created
+          ) {
+            return total;
+          }
+
+          return (
+            total +
+            (resolved - created) /
+              (1000 * 60 * 60 * 24)
+          );
+        },
+        0
+      );
+
+    averageResolutionDays =
+      totalResolutionTime /
+      resolvedWithDates.length;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ACTIVE DEPARTMENTS
+  // ─────────────────────────────────────────────────────────────
+
+  const departmentNames =
+    new Set<string>();
+
+  grievances.forEach((g) => {
+    if (!g.department) {
+      return;
+    }
+
+    if (typeof g.department === "string") {
+      departmentNames.add(
+        g.department
+      );
+      return;
+    }
+
+    if (g.department.name) {
+      departmentNames.add(
+        g.department.name
+      );
+    } else if (g.department.code) {
+      departmentNames.add(
+        g.department.code
+      );
+    }
+  });
+
+  const departmentsActive =
+    departmentNames.size;
+
+  // ─────────────────────────────────────────────────────────────
+  // CATEGORY DATA
+  // ─────────────────────────────────────────────────────────────
+
+  const categoryCounts: Record<
+    string,
+    number
+  > = {};
+
+  grievances.forEach((g) => {
+    const category =
+      g.category?.trim() ||
+      "Uncategorized";
+
+    categoryCounts[category] =
+      (categoryCounts[category] || 0) +
+      1;
+  });
+
+  const categoryColors = [
+    "#2563eb",
+    "#16a34a",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#06b6d4",
+    "#ec4899",
+  ];
+
+  const catAdmin = Object.entries(
+    categoryCounts
+  )
+    .sort(
+      ([, a], [, b]) => b - a
+    )
+    .slice(0, 7)
+    .map(
+      ([name, value], index) => ({
+        name,
+        value,
+        color:
+          categoryColors[
+            index %
+              categoryColors.length
+          ],
+      })
+    );
+
+  // ─────────────────────────────────────────────────────────────
+  // DEPARTMENT PERFORMANCE
+  // ─────────────────────────────────────────────────────────────
+
+    const departmentMap: Record<string, any[]> = {};
+
+  // Create an entry for every real department
+  // returned from MongoDB.
+  departments.forEach((department) => {
+    const key =
+      department._id ||
+      department.code ||
+      department.name;
+
+    departmentMap[key] = [];
+  });
+
+  // Keep genuinely unassigned grievances separate.
+  departmentMap["__UNASSIGNED__"] = [];
+
+  // Attach each grievance to its department.
+  grievances.forEach((g) => {
+    let matchedKey: string | null = null;
+
+    const grievanceDepartment = g.department;
+
+    if (grievanceDepartment) {
+      const departmentId =
+        typeof grievanceDepartment === "string"
+          ? grievanceDepartment
+          : grievanceDepartment?._id;
+
+      const departmentName =
+        typeof grievanceDepartment === "object"
+          ? grievanceDepartment?.name
+          : null;
+
+      const departmentCode =
+        typeof grievanceDepartment === "object"
+          ? grievanceDepartment?.code
+          : null;
+
+      const matchedDepartment =
+        departments.find((department) => {
+          return (
+            String(department._id) ===
+              String(departmentId) ||
+            department.name ===
+              departmentName ||
+            department.code ===
+              departmentCode ||
+            department.name ===
+              grievanceDepartment ||
+            department.code ===
+              grievanceDepartment
+          );
+        });
+
+      if (matchedDepartment) {
+        matchedKey =
+          matchedDepartment._id ||
+          matchedDepartment.code ||
+          matchedDepartment.name;
+      }
+    }
+
+    if (matchedKey) {
+      departmentMap[matchedKey].push(g);
+    } else {
+      departmentMap["__UNASSIGNED__"].push(g);
+    }
+  });
+
+  const depts = Object.entries(
+    departmentMap
+  )
+    .filter(
+      ([key, items]) =>
+        key !== "__UNASSIGNED__" ||
+        items.length > 0
+    )
+    .map(([key, items]) => {
+      const department =
+        departments.find(
+          (d) =>
+            String(d._id) === String(key) ||
+            d.code === key ||
+            d.name === key
+        );
+
+      const name =
+        key === "__UNASSIGNED__"
+          ? "Unassigned"
+          : department?.name || key;
+
+      const open = items.filter(
+        (g) =>
+          ![
+            "RESOLVED",
+            "CLOSED",
+            "REJECTED",
+          ].includes(g.status)
+      ).length;
+
+      const resolved = items.filter(
+        (g) =>
+          g.status === "RESOLVED" ||
+          g.status === "CLOSED"
+      ).length;
+
+      const withSla = items.filter(
+        (g) => g?.sla?.dueAt
+      );
+
+      const breached = withSla.filter(
+        (g) => {
+          if (g?.sla?.breached === true) {
+            return true;
+          }
+
+          return (
+            new Date(
+              g.sla.dueAt
+            ).getTime() < Date.now()
+          );
+        }
+      ).length;
+
+      const sla =
+        withSla.length > 0
+          ? Math.round(
+              ((withSla.length -
+                breached) /
+                withSla.length) *
+                100
+            )
+          : 0;
+
+      const resolvedItems =
+        items.filter(
+          (g) =>
+            (g.status === "RESOLVED" ||
+              g.status === "CLOSED") &&
+            g.createdAt &&
+            (g?.resolution
+              ?.resolvedAt ||
+              g.updatedAt)
+        );
+
+      let avgDays = 0;
+
+      if (resolvedItems.length > 0) {
+        const totalDays =
+          resolvedItems.reduce(
+            (total, g) => {
+              const created =
+                new Date(
+                  g.createdAt
+                ).getTime();
+
+              const resolved =
+                new Date(
+                  g?.resolution
+                    ?.resolvedAt ||
+                    g.updatedAt
+                ).getTime();
+
+              if (
+                Number.isNaN(created) ||
+                Number.isNaN(resolved) ||
+                resolved < created
+              ) {
+                return total;
+              }
+
+              return (
+                total +
+                (resolved - created) /
+                  (1000 * 60 * 60 * 24)
+              );
+            },
+            0
+          );
+
+        avgDays =
+          totalDays /
+          resolvedItems.length;
+      }
+
+      return {
+        name,
+        open,
+        resolved,
+        sla,
+        avg:
+          avgDays > 0
+            ? `${avgDays.toFixed(1)} days`
+            : "—",
+      };
+    });
+
+  // ─────────────────────────────────────────────────────────────
+  // MONTHLY TREND
+  // ─────────────────────────────────────────────────────────────
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const now = new Date();
+
+  const trendData = Array.from(
+    { length: 12 },
+    (_, index) => {
+      const monthIndex =
+        (now.getMonth() -
+          11 +
+          index +
+          12) %
+        12;
+
+      const year =
+        now.getFullYear() -
+        (monthIndex >
+        now.getMonth()
+          ? 1
+          : 0);
+
+      const submitted =
+        grievances.filter((g) => {
+          if (!g.createdAt) {
+            return false;
+          }
+
+          const date = new Date(
+            g.createdAt
+          );
+
+          return (
+            date.getMonth() ===
+              monthIndex &&
+            date.getFullYear() === year
+          );
+        }).length;
+
+      const resolved =
+        grievances.filter((g) => {
+          const resolvedDate =
+            g?.resolution
+              ?.resolvedAt ||
+            (g.status ===
+              "RESOLVED" ||
+              g.status === "CLOSED"
+              ? g.updatedAt
+              : null);
+
+          if (!resolvedDate) {
+            return false;
+          }
+
+          const date = new Date(
+            resolvedDate
+          );
+
+          return (
+            date.getMonth() ===
+              monthIndex &&
+            date.getFullYear() === year
+          );
+        }).length;
+
+      return {
+        month:
+          monthNames[monthIndex],
+        submitted,
+        resolved,
+      };
+    }
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // RECENT ACTIVITY
+  // ─────────────────────────────────────────────────────────────
+
+  const activities: any[] = [];
+
+  grievances.forEach((g) => {
+    if (
+      Array.isArray(g.timeline)
+    ) {
+      g.timeline.forEach(
+        (event: any) => {
+          activities.push({
+            label:
+              event.status ||
+              "Grievance Activity",
+
+            desc:
+              event.message ||
+              g.title ||
+              g.grievanceId,
+
+            time:
+              event.timestamp ||
+              g.updatedAt ||
+              g.createdAt,
+
+            timestamp:
+              new Date(
+                event.timestamp ||
+                  g.updatedAt ||
+                  g.createdAt
+              ).getTime(),
+          });
+        }
+      );
+    }
+  });
+
+  const recentActivities =
+    activities
+      .sort(
+        (a, b) =>
+          b.timestamp -
+          a.timestamp
+      )
+      .slice(0, 5);
+
+  // ─────────────────────────────────────────────────────────────
+  // DYNAMIC GOVERNANCE INSIGHT
+  // ─────────────────────────────────────────────────────────────
+
+  const highestCategory =
+    catAdmin.length > 0
+      ? catAdmin[0]
+      : null;
+
+  const governanceInsight =
+    highestCategory
+      ? `${highestCategory.name} currently has the highest number of grievances with ${highestCategory.value} cases.`
+      : "No grievance category data is available yet.";
+
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Welcome back, Administrator" subtitle="Admin Command Center • Nivara Core Management Platform">
-        <SecondaryBtn onClick={() => navigate("reports")}>Generate Report</SecondaryBtn>
-        <PrimaryBtn onClick={() => navigate("all-grievances")}><span>+</span> System Overview</PrimaryBtn>
+      <PageHeader
+        title={`Welcome back, ${
+          currentUser?.name ||
+          "Administrator"
+        }`}
+        subtitle="Admin Command Center • Nivara Core Management Platform"
+      >
+        <SecondaryBtn
+          onClick={() =>
+            navigate("reports")
+          }
+        >
+          Generate Report
+        </SecondaryBtn>
+
+        <PrimaryBtn
+          onClick={() =>
+            navigate("all-grievances")
+          }
+        >
+          <span>+</span> System Overview
+        </PrimaryBtn>
       </PageHeader>
 
       {/* Quick links */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { label: "🗺 Geographic Intelligence", screen: "geo-intelligence" },
-          { label: "◎ Complaint Clusters", screen: "complaint-clusters" },
-          { label: "✦ AI Analytics", screen: "ai-analytics" },
-          { label: "📋 Audit Logs", screen: "audit-logs" },
-          { label: "📊 Reports", screen: "reports" },
-        ].map(({ label, screen }) => (
-          <button key={screen} onClick={() => navigate(screen)}
-            className="px-3 py-1.5 text-xs border border-slate-200 bg-white rounded-lg text-slate-700 hover:border-blue-400 hover:text-blue-700 transition-colors font-medium shadow-sm">
-            {label}
-          </button>
-        ))}
+          {
+            label:
+              "🗺 Geographic Intelligence",
+            screen:
+              "geo-intelligence",
+          },
+          {
+            label:
+              "◎ Complaint Clusters",
+            screen:
+              "complaint-clusters",
+          },
+          {
+            label: "✦ AI Analytics",
+            screen: "ai-analytics",
+          },
+          {
+            label: "📋 Audit Logs",
+            screen: "audit-logs",
+          },
+          {
+            label: "📊 Reports",
+            screen: "reports",
+          },
+        ].map(
+          ({ label, screen }) => (
+            <button
+              key={screen}
+              onClick={() =>
+                navigate(screen)
+              }
+              className="px-3 py-1.5 text-xs border border-slate-200 bg-white rounded-lg text-slate-700 hover:border-blue-400 hover:text-blue-700 transition-colors font-medium shadow-sm"
+            >
+              {label}
+            </button>
+          )
+        )}
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-1">
-        <KpiCard label="Total Grievances" value="1,247" trend="+12.5%" trendUp={true} />
-        <KpiCard label="Active Cases" value="186" trend="+8.2%" trendUp={true} />
-        <KpiCard label="SLA Compliance" value="91.3%" trend="-2.1%" trendUp={false} />
-        <KpiCard label="Resolution Rate" value="87.6%" trend="+5.3%" trendUp={true} />
-        <KpiCard label="Avg Resolution" value="3.8 days" trend="-15.7%" trendUp={false} />
-        <KpiCard label="Departments Active" value="12" trend="+0%" trendUp={true} />
-      </div>
+      {/* KPI CARDS */}
+      {loading ? (
+        <div className="py-8 text-center text-sm text-slate-500">
+          Loading dashboard data...
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center text-sm text-red-600">
+          {error}
+        </div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          <KpiCard
+            label="Total Grievances"
+            value={String(
+              totalGrievances
+            )}
+            trend="Live"
+            trendUp={true}
+          />
+
+          <KpiCard
+            label="Active Cases"
+            value={String(
+              activeGrievances
+            )}
+            trend="Live"
+            trendUp={true}
+          />
+
+          <KpiCard
+            label="SLA Compliance"
+            value={`${slaCompliant}%`}
+            trend="Live"
+            trendUp={
+              Number(
+                slaCompliant
+              ) >= 90
+            }
+          />
+
+          <KpiCard
+            label="Resolution Rate"
+            value={`${resolutionRate}%`}
+            trend="Live"
+            trendUp={
+              Number(
+                resolutionRate
+              ) >= 70
+            }
+          />
+
+          <KpiCard
+            label="Avg Resolution"
+            value={
+              averageResolutionDays >
+              0
+                ? `${averageResolutionDays.toFixed(
+                    1
+                  )} days`
+                : "—"
+            }
+            trend="Live"
+            trendUp={
+              averageResolutionDays <
+              3
+            }
+          />
+
+          <KpiCard
+            label="Departments Active"
+            value={String(
+              departmentsActive
+            )}
+            trend="Live"
+            trendUp={true}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-5">
         <div className="col-span-2 space-y-5">
+          {/* GRIEVANCE TREND */}
           <SectionCard
             title="Grievance Volume Overview"
             subtitle="Monthly breakdown of submitted issues vs resolved resolutions"
-            extra={<button className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900">Last 12 months ∨</button>}
+            extra={
+              <button className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900">
+                Last 12 months ∨
+              </button>
+            }
           >
-            <ChartLegend items={[{ color: "#2563eb", label: "Submitted" }, { color: "#16a34a", label: "Resolved" }]} />
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                <Line type="monotone" dataKey="submitted" stroke="#2563eb" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="resolved" stroke="#16a34a" strokeWidth={2} dot={false} />
+            <ChartLegend
+              items={[
+                {
+                  color: "#2563eb",
+                  label: "Submitted",
+                },
+                {
+                  color: "#16a34a",
+                  label: "Resolved",
+                },
+              ]}
+            />
+
+            <ResponsiveContainer
+              width="100%"
+              height={220}
+            >
+              <LineChart
+                data={trendData}
+                margin={{
+                  top: 4,
+                  right: 4,
+                  left: -20,
+                  bottom: 0,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f1f5f9"
+                />
+
+                <XAxis
+                  dataKey="month"
+                  tick={{
+                    fontSize: 11,
+                    fill: "#94a3b8",
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <YAxis
+                  tick={{
+                    fontSize: 11,
+                    fill: "#94a3b8",
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 8,
+                    border:
+                      "1px solid #e2e8f0",
+                    fontSize: 12,
+                  }}
+                />
+
+                <Line
+                  type="monotone"
+                  dataKey="submitted"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  dot={false}
+                />
+
+                <Line
+                  type="monotone"
+                  dataKey="resolved"
+                  stroke="#16a34a"
+                  strokeWidth={2}
+                  dot={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </SectionCard>
 
-          <SectionCard title="Department Performance SLA Report" extra={<GhostBtn onClick={() => navigate("departments")}>View all departments</GhostBtn>}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
-                  {["Department", "Open Cases", "Resolved", "SLA Compliance", "Avg Resolution", "Action"].map(h => (
-                    <th key={h} className="text-left font-medium pb-2 pr-3">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                {depts.map(d => (
-                  <tr key={d.name} className="hover:bg-slate-50 dark:bg-slate-900">
-                    <td className="py-2.5 pr-3 font-medium text-slate-800 text-sm">{d.name}</td>
-                    <td className="py-2.5 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">{d.open}</td>
-                    <td className="py-2.5 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">{d.resolved}</td>
-                    <td className="py-2.5 pr-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${d.sla >= 90 ? "bg-green-100 text-green-700" : d.sla >= 80 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                        {d.sla}%
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-3 text-slate-600 text-xs">{d.avg}</td>
-                    <td className="py-2.5">
-                      <button className="text-xs text-blue-600 hover:underline">View</button>
-                    </td>
+          {/* DEPARTMENT PERFORMANCE */}
+          <SectionCard
+            title="Department Performance SLA Report"
+            extra={
+              <GhostBtn
+                onClick={() =>
+                  navigate(
+                    "departments"
+                  )
+                }
+              >
+                View all departments
+              </GhostBtn>
+            }
+          >
+            {depts.length === 0 ? (
+              <div className="py-8 text-center text-sm text-slate-500">
+                No department data available.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                    {[
+                      "Department",
+                      "Open Cases",
+                      "Resolved",
+                      "SLA Compliance",
+                      "Avg Resolution",
+                      "Action",
+                    ].map(
+                      (heading) => (
+                        <th
+                          key={heading}
+                          className="text-left font-medium pb-2 pr-3"
+                        >
+                          {heading}
+                        </th>
+                      )
+                    )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                  {depts.map(
+                    (department) => (
+                      <tr
+                        key={
+                          department.name
+                        }
+                        className="hover:bg-slate-50 dark:bg-slate-900"
+                      >
+                        <td className="py-2.5 pr-3 font-medium text-slate-800 text-sm">
+                          {
+                            department.name
+                          }
+                        </td>
+
+                        <td className="py-2.5 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                          {
+                            department.open
+                          }
+                        </td>
+
+                        <td className="py-2.5 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                          {
+                            department.resolved
+                          }
+                        </td>
+
+                        <td className="py-2.5 pr-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                              department.sla >=
+                              90
+                                ? "bg-green-100 text-green-700"
+                                : department.sla >=
+                                  80
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {
+                              department.sla
+                            }
+                            %
+                          </span>
+                        </td>
+
+                        <td className="py-2.5 pr-3 text-slate-600 text-xs">
+                          {
+                            department.avg
+                          }
+                        </td>
+
+                        <td className="py-2.5">
+                          <button
+                            onClick={() =>
+                              navigate(
+                                "departments"
+                              )
+                            }
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            )}
           </SectionCard>
         </div>
 
         <div className="space-y-4">
+          {/* CATEGORY DISTRIBUTION */}
           <SectionCard title="Grievances by Category">
-            <div className="space-y-2.5">
-              {catAdmin.map(c => (
-                <div key={c.name} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
-                      <span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">{c.name}</span>
+            {catAdmin.length ===
+            0 ? (
+              <div className="py-8 text-center text-sm text-slate-500">
+                No category data available.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {catAdmin.map(
+                  (category) => (
+                    <div
+                      key={
+                        category.name
+                      }
+                      className="space-y-1"
+                    >
+                      <div className="flex justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{
+                              background:
+                                category.color,
+                            }}
+                          />
+
+                          <span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                            {
+                              category.name
+                            }
+                          </span>
+                        </div>
+
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {
+                            category.value
+                          }
+                        </span>
+                      </div>
+
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${
+                              totalGrievances >
+                              0
+                                ? (category.value /
+                                    totalGrievances) *
+                                  100
+                                : 0
+                            }%`,
+                            background:
+                              category.color,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{c.value}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${(c.value / 280) * 100}%`, background: c.color }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+                  )
+                )}
+              </div>
+            )}
           </SectionCard>
 
+          {/* DATA-DRIVEN GOVERNANCE INSIGHT */}
           <AiInsightCard
             title="AI-Assisted Governance Insights"
-            text={<>Road-related grievances <strong>increased 18%</strong> this month in <strong>Zone 4</strong>. Water supply complaints concentrated in <strong>Sectors 3 and 7</strong> — consider preemptive infrastructure audit.</>}
-            disclaimer="AI Insight helper • Verify before official action"
+            text={
+              <>
+                {governanceInsight}
+              </>
+            }
+            disclaimer="Dashboard insight generated from current grievance data."
           />
 
+          {/* RECENT ACTIVITY */}
           <SectionCard title="Recent Administrative Activity">
-            <Timeline steps={[
-              { label: "Department Reassignment", desc: "NV-1080 moved to Water Supply", time: "9:00 AM", done: true },
-              { label: "Officer Assignment", desc: "Pradeep assigned NV-1075", time: "10:30 AM", done: true },
-              { label: "SLA Escalation", desc: "NV-1084 auto-escalated", time: "11:00 AM", done: true },
-              { label: "Status Update", desc: "NV-1070 marked Resolved", time: "1:15 PM", done: true },
-              { label: "Audit Event", desc: "Department config updated", time: "3:00 PM", done: false },
-            ]} />
+            {recentActivities.length ===
+            0 ? (
+              <div className="py-8 text-center text-sm text-slate-500">
+                No recent activity available.
+              </div>
+            ) : (
+              <Timeline
+                steps={recentActivities.map(
+                  (activity) => ({
+                    label:
+                      activity.label,
+                    desc:
+                      activity.desc,
+                    time:
+                      new Date(
+                        activity.time
+                      ).toLocaleTimeString(
+                        "en-IN",
+                        {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }
+                      ),
+                    done: true,
+                  })
+                )}
+              />
+            )}
           </SectionCard>
         </div>
       </div>
@@ -169,95 +1148,702 @@ export function AdminDashboard({ navigate }: { navigate: (s: string) => void }) 
 }
 
 // ─── All Grievances ───────────────────────────────────────────────────────────
-export function AllGrievances({ navigate }: { navigate: (s: string) => void }) {
+export function AllGrievances({
+  navigate,
+}: {
+  navigate: (s: string) => void;
+}) {
   const [search, setSearch] = useState("");
   const [activeChips, setActiveChips] = useState<string[]>([]);
-  const toggleChip = (c: string) => setActiveChips(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
+  const [grievances, setGrievances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const chips = ["Critical", "High", "SLA Breached", "Duplicate", "Water Supply", "Roads", "Escalated"];
+  const toggleChip = (chip: string) => {
+    setActiveChips((previous) =>
+      previous.includes(chip)
+        ? previous.filter((item) => item !== chip)
+        : [...previous, chip]
+    );
+  };
+
+  const chips = [
+    "Critical",
+    "High",
+    "SLA Breached",
+    "Duplicate",
+    "Water Supply",
+    "Roads",
+    "Escalated",
+  ];
+
+  useEffect(() => {
+    const loadGrievances = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
+        const response = await getMyGrievances(token);
+
+        const items = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.grievances)
+          ? response.grievances
+          : Array.isArray(response?.data)
+          ? response.data
+          : [];
+
+        setGrievances(items);
+      } catch (err) {
+        console.error("Failed to load grievances:", err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load grievances"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGrievances();
+  }, []);
+
+  const getDepartmentName = (grievance: any) => {
+    if (!grievance.department) {
+      return "Unassigned";
+    }
+
+    if (typeof grievance.department === "string") {
+      return grievance.department;
+    }
+
+    return (
+      grievance.department.name ||
+      grievance.department.code ||
+      "Unassigned"
+    );
+  };
+
+  const getOfficerName = (grievance: any) => {
+    if (!grievance.assignedOfficer) {
+      return "Unassigned";
+    }
+
+    if (typeof grievance.assignedOfficer === "string") {
+      return grievance.assignedOfficer;
+    }
+
+    return (
+      grievance.assignedOfficer.name ||
+      "Unassigned"
+    );
+  };
+
+  const getLocation = (grievance: any) => {
+    const location = grievance.location;
+
+    if (!location) {
+      return "Not provided";
+    }
+
+    return (
+      location.city ||
+      location.district ||
+      location.state ||
+      location.address ||
+      "Not provided"
+    );
+  };
+
+  const getAiScore = (grievance: any) => {
+    const score =
+      grievance?.aiAnalysis?.priorityScore;
+
+    return typeof score === "number" ? score : null;
+  };
+
+  const getSlaStatus = (grievance: any) => {
+    if (grievance?.sla?.breached) {
+      return "breach" as const;
+    }
+
+    if (!grievance?.sla?.dueAt) {
+      return "ok" as const;
+    }
+
+    const dueAt = new Date(
+      grievance.sla.dueAt
+    ).getTime();
+
+    if (Number.isNaN(dueAt)) {
+      return "ok" as const;
+    }
+
+    const remaining =
+      dueAt - Date.now();
+
+    if (remaining <= 0) {
+      return "breach" as const;
+    }
+
+    // Near deadline if less than 24 hours remain.
+    if (
+      remaining <=
+      24 * 60 * 60 * 1000
+    ) {
+      return "warn" as const;
+    }
+
+    return "ok" as const;
+  };
+
+  const getSlaRemaining = (grievance: any) => {
+    const slaStatus =
+      getSlaStatus(grievance);
+
+    if (slaStatus === "breach") {
+      return "Breached";
+    }
+
+    if (!grievance?.sla?.dueAt) {
+      return "Not set";
+    }
+
+    const dueAt = new Date(
+      grievance.sla.dueAt
+    ).getTime();
+
+    if (Number.isNaN(dueAt)) {
+      return "Not set";
+    }
+
+    const difference =
+      dueAt - Date.now();
+
+    if (difference <= 0) {
+      return "Breached";
+    }
+
+    const totalMinutes = Math.floor(
+      difference / (1000 * 60)
+    );
+
+    const days = Math.floor(
+      totalMinutes / (60 * 24)
+    );
+
+    const hours = Math.floor(
+      (totalMinutes % (60 * 24)) / 60
+    );
+
+    const minutes =
+      totalMinutes % 60;
+
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    }
+
+    return `${hours}h ${minutes}m`;
+  };
+
+  const formatDate = (date: string) => {
+    if (!date) {
+      return "Unknown";
+    }
+
+    const parsedDate =
+      new Date(date);
+
+    if (
+      Number.isNaN(
+        parsedDate.getTime()
+      )
+    ) {
+      return "Unknown";
+    }
+
+    return parsedDate.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
+
+  const matchesSearch = (
+    grievance: any
+  ) => {
+    if (!search.trim()) {
+      return true;
+    }
+
+    const query =
+      search.toLowerCase();
+
+    const values = [
+      grievance.grievanceId,
+      grievance._id,
+      grievance.title,
+      grievance.description,
+      grievance.category,
+      grievance.subcategory,
+      getDepartmentName(grievance),
+      getOfficerName(grievance),
+      getLocation(grievance),
+      grievance.status,
+      grievance.priority,
+    ];
+
+    return values.some((value) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(query)
+    );
+  };
+
+  const matchesQuickFilters = (
+    grievance: any
+  ) => {
+    if (activeChips.length === 0) {
+      return true;
+    }
+
+    return activeChips.every(
+      (chip) => {
+        switch (chip) {
+          case "Critical":
+            return (
+              grievance.priority ===
+              "CRITICAL"
+            );
+
+          case "High":
+            return (
+              grievance.priority ===
+              "HIGH"
+            );
+
+          case "SLA Breached":
+            return (
+              getSlaStatus(
+                grievance
+              ) === "breach"
+            );
+
+          case "Duplicate":
+            return (
+              Array.isArray(
+                grievance.duplicateMatches
+              ) &&
+              grievance
+                .duplicateMatches
+                .length > 0
+            );
+
+          case "Water Supply":
+            return String(
+              grievance.category || ""
+            )
+              .toLowerCase()
+              .includes("water");
+
+          case "Roads":
+            return (
+              String(
+                grievance.category || ""
+              )
+                .toLowerCase()
+                .includes("road") ||
+              String(
+                grievance.subcategory || ""
+              )
+                .toLowerCase()
+                .includes("road")
+            );
+
+          case "Escalated":
+            return (
+              grievance?.sla
+                ?.escalated === true
+            );
+
+          default:
+            return true;
+        }
+      }
+    );
+  };
+
+  const filteredGrievances =
+    grievances.filter(
+      (grievance) =>
+        matchesSearch(grievance) &&
+        matchesQuickFilters(grievance)
+    );
 
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="All Grievances" subtitle="Universal grievance management across all departments and officers">
-        <SecondaryBtn>Export CSV</SecondaryBtn>
-        <PrimaryBtn>Export PDF</PrimaryBtn>
+      <PageHeader
+        title="All Grievances"
+        subtitle="Universal grievance management across all departments and officers"
+      >
+        <SecondaryBtn>
+          Export CSV
+        </SecondaryBtn>
+
+        <PrimaryBtn>
+          Export PDF
+        </PrimaryBtn>
       </PageHeader>
 
       <div className="bg-white dark:bg-slate-800 border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
         <div className="flex gap-3">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                cx="11"
+                cy="11"
+                r="8"
+              />
+
+              <line
+                x1="21"
+                y1="21"
+                x2="16.65"
+                y2="16.65"
+              />
             </svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by ID, title, category, officer..." className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
+
+            <input
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              placeholder="Search by ID, title, category, officer..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
+            />
           </div>
-          {["Priority ∨", "Category ∨", "Department ∨", "Officer ∨", "Zone ∨", "SLA ∨", "Status ∨", "Date ∨"].map(f => (
-            <button key={f} className="px-3 py-2 text-xs border border-slate-200 rounded-lg text-slate-600 hover:border-blue-400 bg-white whitespace-nowrap">{f}</button>
+
+          {[
+            "Priority ∨",
+            "Category ∨",
+            "Department ∨",
+            "Officer ∨",
+            "Zone ∨",
+            "SLA ∨",
+            "Status ∨",
+            "Date ∨",
+          ].map((filter) => (
+            <button
+              key={filter}
+              className="px-3 py-2 text-xs border border-slate-200 rounded-lg text-slate-600 hover:border-blue-400 bg-white whitespace-nowrap"
+            >
+              {filter}
+            </button>
           ))}
         </div>
+
         <div className="flex gap-2 flex-wrap items-center">
-          <span className="text-xs text-slate-500 dark:text-slate-500">Quick filters:</span>
-          {chips.map(c => (
-            <FilterChip key={c} label={c} active={activeChips.includes(c)} onClick={() => toggleChip(c)} />
+          <span className="text-xs text-slate-500 dark:text-slate-500">
+            Quick filters:
+          </span>
+
+          {chips.map((chip) => (
+            <FilterChip
+              key={chip}
+              label={chip}
+              active={activeChips.includes(
+                chip
+              )}
+              onClick={() =>
+                toggleChip(chip)
+              }
+            />
           ))}
-          {activeChips.length > 0 && <button onClick={() => setActiveChips([])} className="text-xs text-slate-400 hover:text-slate-600 underline">Clear all</button>}
+
+          {activeChips.length > 0 && (
+            <button
+              onClick={() =>
+                setActiveChips([])
+              }
+              className="text-xs text-slate-400 hover:text-slate-600 underline"
+            >
+              Clear all
+            </button>
+          )}
         </div>
       </div>
 
       <SectionCard>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-slate-500 dark:text-slate-500">Showing <strong>{allGrievances.length}</strong> grievances</p>
+          <p className="text-xs text-slate-500 dark:text-slate-500">
+            Showing{" "}
+            <strong>
+              {filteredGrievances.length}
+            </strong>{" "}
+            grievances
+          </p>
+
           <div className="flex gap-2 text-xs text-slate-500 dark:text-slate-500">
-            <span>Sort by: <button className="text-blue-600 font-medium">AI Score ∨</button></span>
+            <span>
+              Sort by:{" "}
+              <button className="text-blue-600 font-medium">
+                AI Score ∨
+              </button>
+            </span>
           </div>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
-              {["ID", "Title", "Category", "Priority", "AI Score", "Department", "Officer", "Location", "Status", "SLA", "Dup.", "Created", "Action"].map(h => (
-                <th key={h} className="text-left font-medium pb-3 pr-2">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-            {allGrievances.filter(g => !search || g.title.toLowerCase().includes(search.toLowerCase()) || g.id.includes(search)).map(r => (
-              <tr key={r.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate("grievance-detail")}>
-                <td className="py-2.5 pr-2 font-mono text-xs text-blue-600 font-semibold">{r.id}</td>
-                <td className="py-2.5 pr-2 text-slate-800 font-medium text-xs max-w-28 truncate">{r.title}</td>
-                <td className="py-2.5 pr-2 text-slate-500 text-xs">{r.cat}</td>
-                <td className="py-2.5 pr-2"><PriorityBadge priority={r.priority} /></td>
-                <td className="py-2.5 pr-2">
-                  <div className="flex items-center gap-1">
-                    <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${r.score}%`, background: r.score > 85 ? "#ef4444" : r.score > 70 ? "#f59e0b" : "#3b82f6" }} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{r.score}</span>
-                  </div>
-                </td>
-                <td className="py-2.5 pr-2 text-slate-500 text-xs">{r.dept}</td>
-                <td className="py-2.5 pr-2 text-slate-500 text-xs">{r.officer}</td>
-                <td className="py-2.5 pr-2 text-slate-500 text-xs">{r.location}</td>
-                <td className="py-2.5 pr-2"><StatusBadge status={r.status} /></td>
-                <td className="py-2.5 pr-2"><SlaIndicator status={r.sla} remaining={r.sla === "breach" ? "Breached" : r.sla === "warn" ? "~2h" : "OK"} /></td>
-                <td className="py-2.5 pr-2 text-center">
-                  {r.dup && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">DUP</span>}
-                </td>
-                <td className="py-2.5 pr-2 text-slate-400 text-xs">{r.date}</td>
-                <td className="py-2.5">
-                  <button className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50">View</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 dark:text-slate-500">
-          <span>Page 1 of 48</span>
-          <div className="flex gap-1">
-            {["←", "1", "2", "3", "...", "48", "→"].map((p, i) => (
-              <button key={i} className={`w-7 h-7 rounded text-xs ${p === "1" ? "bg-blue-600 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900"}`}>{p}</button>
-            ))}
+
+        {loading ? (
+          <div className="py-12 text-center text-sm text-slate-500">
+            Loading grievances...
           </div>
-        </div>
+        ) : error ? (
+          <div className="py-12 text-center">
+            <p className="text-sm text-red-600">
+              {error}
+            </p>
+          </div>
+        ) : filteredGrievances.length === 0 ? (
+          <div className="py-12 text-center text-sm text-slate-500">
+            No grievances found.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                  {[
+                    "ID",
+                    "Title",
+                    "Category",
+                    "Priority",
+                    "AI Score",
+                    "Department",
+                    "Officer",
+                    "Location",
+                    "Status",
+                    "SLA",
+                    "Dup.",
+                    "Created",
+                    "Action",
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="text-left font-medium pb-3 pr-2"
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                {filteredGrievances.map(
+                  (grievance) => {
+                    const aiScore =
+                      getAiScore(
+                        grievance
+                      );
+
+                    const slaStatus =
+                      getSlaStatus(
+                        grievance
+                      );
+
+                    const slaRemaining =
+                      getSlaRemaining(
+                        grievance
+                      );
+
+                    return (
+                      <tr
+                        key={
+                          grievance._id ||
+                          grievance.grievanceId
+                        }
+                        className="hover:bg-slate-50 cursor-pointer"
+                        onClick={() =>
+                          navigate(
+                            `grievance-detail/${
+                              grievance._id ||
+                              grievance.grievanceId
+                            }`
+                          )
+                        }
+                      >
+                        <td className="py-2.5 pr-2 font-mono text-xs text-blue-600 font-semibold">
+                          {grievance.grievanceId ||
+                            grievance._id ||
+                            "—"}
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-slate-800 font-medium text-xs max-w-28 truncate">
+                          {grievance.title ||
+                            "Untitled grievance"}
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-slate-500 text-xs">
+                          {grievance.category ||
+                            "Uncategorized"}
+                        </td>
+
+                        <td className="py-2.5 pr-2">
+                          <PriorityBadge
+                            priority={
+                              grievance.priority ||
+                              "MEDIUM"
+                            }
+                          />
+                        </td>
+
+                        <td className="py-2.5 pr-2">
+                          {aiScore !== null ? (
+                            <div className="flex items-center gap-1">
+                              <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      Math.max(
+                                        0,
+                                        aiScore
+                                      )
+                                    )}%`,
+                                    background:
+                                      aiScore > 85
+                                        ? "#ef4444"
+                                        : aiScore > 70
+                                        ? "#f59e0b"
+                                        : "#3b82f6",
+                                  }}
+                                />
+                              </div>
+
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                {aiScore}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">
+                              —
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-slate-500 text-xs">
+                          {getDepartmentName(
+                            grievance
+                          )}
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-slate-500 text-xs">
+                          {getOfficerName(
+                            grievance
+                          )}
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-slate-500 text-xs">
+                          {getLocation(
+                            grievance
+                          )}
+                        </td>
+
+                        <td className="py-2.5 pr-2">
+                          <StatusBadge
+                            status={
+                              grievance.status ||
+                              "SUBMITTED"
+                            }
+                          />
+                        </td>
+
+                        <td className="py-2.5 pr-2">
+                          <SlaIndicator
+                            status={slaStatus}
+                            remaining={
+                              slaRemaining
+                            }
+                          />
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-center">
+                          {Array.isArray(
+                            grievance.duplicateMatches
+                          ) &&
+                          grievance
+                            .duplicateMatches
+                            .length > 0 ? (
+                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+                              DUP
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">
+                              —
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 pr-2 text-slate-400 text-xs">
+                          {formatDate(
+                            grievance.createdAt
+                          )}
+                        </td>
+
+                        <td className="py-2.5">
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+
+                              navigate(
+                                `grievance-detail/${
+                                  grievance._id ||
+                                  grievance.grievanceId
+                                }`
+                              );
+                            }}
+                            className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          filteredGrievances.length > 0 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 dark:text-slate-500">
+              <span>
+                Showing all{" "}
+                {filteredGrievances.length}{" "}
+                loaded grievances
+              </span>
+            </div>
+          )}
       </SectionCard>
     </div>
   );
@@ -265,66 +1851,581 @@ export function AllGrievances({ navigate }: { navigate: (s: string) => void }) {
 
 // ─── Departments ──────────────────────────────────────────────────────────────
 export function Departments() {
+  const [grievances, setGrievances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadGrievances = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
+        const response = await getMyGrievances(token);
+
+        const items = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.grievances)
+          ? response.grievances
+          : Array.isArray(response?.data)
+          ? response.data
+          : [];
+
+        setGrievances(items);
+      } catch (err) {
+        console.error(
+          "Failed to load department data:",
+          err
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load department data"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGrievances();
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────
+  // DEPARTMENT STATISTICS
+  // ─────────────────────────────────────────────────────────────
+
+  const departmentMap: Record<string, any[]> = {};
+
+  grievances.forEach((grievance) => {
+    let departmentName = "Unassigned";
+
+    if (
+      typeof grievance.department === "string"
+    ) {
+      departmentName =
+        grievance.department;
+    } else if (
+      grievance.department?.name
+    ) {
+      departmentName =
+        grievance.department.name;
+    } else if (
+      grievance.department?.code
+    ) {
+      departmentName =
+        grievance.department.code;
+    }
+
+    if (!departmentMap[departmentName]) {
+      departmentMap[departmentName] = [];
+    }
+
+    departmentMap[departmentName].push(
+      grievance
+    );
+  });
+
+  const departmentData = Object.entries(
+    departmentMap
+  ).map(([name, items]) => {
+    const open = items.filter(
+      (grievance) =>
+        ![
+          "RESOLVED",
+          "CLOSED",
+          "REJECTED",
+        ].includes(grievance.status)
+    ).length;
+
+    const resolved = items.filter(
+      (grievance) =>
+        grievance.status ===
+          "RESOLVED" ||
+        grievance.status === "CLOSED"
+    ).length;
+
+    const critical = items.filter(
+      (grievance) =>
+        grievance.priority ===
+        "CRITICAL"
+    ).length;
+
+    // SLA
+    const grievancesWithSla =
+      items.filter(
+        (grievance) =>
+          grievance?.sla?.dueAt
+      );
+
+    const breached =
+      grievancesWithSla.filter(
+        (grievance) => {
+          if (
+            grievance?.sla?.breached ===
+            true
+          ) {
+            return true;
+          }
+
+          return (
+            new Date(
+              grievance.sla.dueAt
+            ).getTime() < Date.now()
+          );
+        }
+      ).length;
+
+    const sla =
+      grievancesWithSla.length > 0
+        ? Math.round(
+            ((grievancesWithSla.length -
+              breached) /
+              grievancesWithSla.length) *
+              100
+          )
+        : 0;
+
+    // Average resolution time
+    const resolvedWithDates =
+      items.filter(
+        (grievance) =>
+          (
+            grievance.status ===
+              "RESOLVED" ||
+            grievance.status ===
+              "CLOSED"
+          ) &&
+          grievance.createdAt &&
+          (
+            grievance?.resolution
+              ?.resolvedAt ||
+            grievance.updatedAt
+          )
+      );
+
+    let averageDays = 0;
+
+    if (
+      resolvedWithDates.length > 0
+    ) {
+      const totalDays =
+        resolvedWithDates.reduce(
+          (
+            total,
+            grievance
+          ) => {
+            const created =
+              new Date(
+                grievance.createdAt
+              ).getTime();
+
+            const resolved =
+              new Date(
+                grievance
+                  ?.resolution
+                  ?.resolvedAt ||
+                  grievance.updatedAt
+              ).getTime();
+
+            if (
+              Number.isNaN(
+                created
+              ) ||
+              Number.isNaN(
+                resolved
+              ) ||
+              resolved < created
+            ) {
+              return total;
+            }
+
+            return (
+              total +
+              (resolved -
+                created) /
+                (1000 *
+                  60 *
+                  60 *
+                  24)
+            );
+          },
+          0
+        );
+
+      averageDays =
+        totalDays /
+        resolvedWithDates.length;
+    }
+
+    // Assigned officers represented in
+    // the currently loaded grievances.
+    const officers =
+      new Set<string>();
+
+    items.forEach(
+      (grievance) => {
+        if (
+          !grievance.assignedOfficer
+        ) {
+          return;
+        }
+
+        if (
+          typeof grievance.assignedOfficer ===
+          "string"
+        ) {
+          officers.add(
+            grievance.assignedOfficer
+          );
+        } else if (
+          grievance.assignedOfficer
+            ._id
+        ) {
+          officers.add(
+            grievance.assignedOfficer
+              ._id
+          );
+        }
+      }
+    );
+
+    return {
+      name,
+      open,
+      resolved,
+      sla,
+      avg:
+        averageDays > 0
+          ? `${averageDays.toFixed(
+              1
+            )} days`
+          : "—",
+      critical,
+      officers:
+        officers.size,
+    };
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // KPI VALUES
+  // ─────────────────────────────────────────────────────────────
+
+  const totalDepartments =
+    departmentData.length;
+
+  const totalOpenCases =
+    grievances.filter(
+      (grievance) =>
+        ![
+          "RESOLVED",
+          "CLOSED",
+          "REJECTED",
+        ].includes(
+          grievance.status
+        )
+    ).length;
+
+  const allWithSla =
+    grievances.filter(
+      (grievance) =>
+        grievance?.sla?.dueAt
+    );
+
+  const allBreached =
+    allWithSla.filter(
+      (grievance) => {
+        if (
+          grievance?.sla?.breached ===
+          true
+        ) {
+          return true;
+        }
+
+        return (
+          new Date(
+            grievance.sla.dueAt
+          ).getTime() < Date.now()
+        );
+      }
+    ).length;
+
+  const averageSla =
+    allWithSla.length > 0
+      ? (
+          ((allWithSla.length -
+            allBreached) /
+            allWithSla.length) *
+          100
+        ).toFixed(1)
+      : "0.0";
+
+  const activeOfficers =
+    new Set<string>();
+
+  grievances.forEach(
+    (grievance) => {
+      if (
+        !grievance.assignedOfficer
+      ) {
+        return;
+      }
+
+      if (
+        typeof grievance.assignedOfficer ===
+        "string"
+      ) {
+        activeOfficers.add(
+          grievance.assignedOfficer
+        );
+      } else if (
+        grievance.assignedOfficer
+          ._id
+      ) {
+        activeOfficers.add(
+          grievance.assignedOfficer
+            ._id
+        );
+      }
+    }
+  );
+
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Department Management" subtitle="Manage departments, SLA configuration and officer assignments">
-        <PrimaryBtn>+ Add Department</PrimaryBtn>
+      <PageHeader
+        title="Department Management"
+        subtitle="Manage departments, SLA configuration and officer assignments"
+      >
+        <PrimaryBtn>
+          + Add Department
+        </PrimaryBtn>
       </PageHeader>
 
-      <div className="flex gap-3">
-        <KpiCard label="Total Departments" value="12" trend="+0%" trendUp={true} />
-        <KpiCard label="Active Officers" value="142" trend="+8%" trendUp={true} />
-        <KpiCard label="Avg SLA Compliance" value="91.3%" trend="-2.1%" trendUp={false} />
-        <KpiCard label="Open Cases" value="186" trend="+8.2%" trendUp={false} />
-      </div>
+      {loading ? (
+        <div className="py-8 text-center text-sm text-slate-500">
+          Loading department data...
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center text-sm text-red-600">
+          {error}
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-3">
+            <KpiCard
+              label="Total Departments"
+              value={String(
+                totalDepartments
+              )}
+              trend="Live"
+              trendUp={true}
+            />
 
-      <SectionCard>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
-              {["Department", "Open Cases", "Resolved", "SLA Compliance", "Avg Resolution", "Critical", "Officers", "Actions"].map(h => (
-                <th key={h} className="text-left font-medium pb-3 pr-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-            {depts.map(d => (
-              <tr key={d.name} className="hover:bg-slate-50 dark:bg-slate-900">
-                <td className="py-3 pr-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">
-                      {d.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
-                    </div>
-                    <span className="font-medium text-slate-800 dark:text-slate-200">{d.name}</span>
-                  </div>
-                </td>
-                <td className="py-3 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">{d.open}</td>
-                <td className="py-3 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">{d.resolved}</td>
-                <td className="py-3 pr-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${d.sla}%`, background: d.sla >= 90 ? "#16a34a" : d.sla >= 80 ? "#d97706" : "#ef4444" }} />
-                    </div>
-                    <span className={`text-xs font-semibold ${d.sla >= 90 ? "text-green-700" : d.sla >= 80 ? "text-amber-700" : "text-red-700"}`}>{d.sla}%</span>
-                  </div>
-                </td>
-                <td className="py-3 pr-3 text-slate-600 text-xs">{d.avg}</td>
-                <td className="py-3 pr-3">
-                  {d.critical > 0 && <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">{d.critical}</span>}
-                </td>
-                <td className="py-3 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">{d.officers}</td>
-                <td className="py-3">
-                  <div className="flex gap-1">
-                    <button className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50">View</button>
-                    <button className="text-xs text-slate-600 border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-50 dark:bg-slate-900">SLA Config</button>
-                    <button className="text-xs text-slate-600 border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-50 dark:bg-slate-900">Officers</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </SectionCard>
+            <KpiCard
+              label="Active Officers"
+              value={String(
+                activeOfficers.size
+              )}
+              trend="Assigned grievances"
+              trendUp={true}
+            />
+
+            <KpiCard
+              label="Avg SLA Compliance"
+              value={`${averageSla}%`}
+              trend="Live"
+              trendUp={
+                Number(
+                  averageSla
+                ) >= 90
+              }
+            />
+
+            <KpiCard
+              label="Open Cases"
+              value={String(
+                totalOpenCases
+              )}
+              trend="Live"
+              trendUp={
+                totalOpenCases > 0
+              }
+            />
+          </div>
+
+          <SectionCard>
+            {departmentData.length ===
+            0 ? (
+              <div className="py-10 text-center text-sm text-slate-500">
+                No department grievance
+                data available.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                    {[
+                      "Department",
+                      "Open Cases",
+                      "Resolved",
+                      "SLA Compliance",
+                      "Avg Resolution",
+                      "Critical",
+                      "Officers",
+                      "Actions",
+                    ].map(
+                      (heading) => (
+                        <th
+                          key={heading}
+                          className="text-left font-medium pb-3 pr-3"
+                        >
+                          {heading}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                  {departmentData.map(
+                    (department) => (
+                      <tr
+                        key={
+                          department.name
+                        }
+                        className="hover:bg-slate-50 dark:bg-slate-900"
+                      >
+                        <td className="py-3 pr-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">
+                              {department.name
+                                .split(
+                                  " "
+                                )
+                                .map(
+                                  (
+                                    word
+                                  ) =>
+                                    word[0]
+                                )
+                                .join("")
+                                .slice(
+                                  0,
+                                  2
+                                )}
+                            </div>
+
+                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                              {
+                                department.name
+                              }
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                          {
+                            department.open
+                          }
+                        </td>
+
+                        <td className="py-3 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                          {
+                            department.resolved
+                          }
+                        </td>
+
+                        <td className="py-3 pr-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${department.sla}%`,
+                                  background:
+                                    department.sla >=
+                                    90
+                                      ? "#16a34a"
+                                      : department.sla >=
+                                        80
+                                      ? "#d97706"
+                                      : "#ef4444",
+                                }}
+                              />
+                            </div>
+
+                            <span
+                              className={`text-xs font-semibold ${
+                                department.sla >=
+                                90
+                                  ? "text-green-700"
+                                  : department.sla >=
+                                    80
+                                  ? "text-amber-700"
+                                  : "text-red-700"
+                              }`}
+                            >
+                              {
+                                department.sla
+                              }
+                              %
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 pr-3 text-slate-600 text-xs">
+                          {
+                            department.avg
+                          }
+                        </td>
+
+                        <td className="py-3 pr-3">
+                          {department.critical >
+                            0 && (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                              {
+                                department.critical
+                              }
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3 pr-3 text-slate-600 dark:text-slate-400 dark:text-slate-500">
+                          {
+                            department.officers
+                          }
+                        </td>
+
+                        <td className="py-3">
+                          <div className="flex gap-1">
+                            <button className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50">
+                              View
+                            </button>
+
+                            <button className="text-xs text-slate-600 border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-50 dark:bg-slate-900">
+                              SLA Config
+                            </button>
+
+                            <button className="text-xs text-slate-600 border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-50 dark:bg-slate-900">
+                              Officers
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            )}
+          </SectionCard>
+        </>
+      )}
     </div>
   );
 }

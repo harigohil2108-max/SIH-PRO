@@ -113,6 +113,7 @@ const grievanceSchema = new mongoose.Schema(
         min: 0,
         max: 1,
       },
+      summary: String,
     },
 
     duplicateMatches: [

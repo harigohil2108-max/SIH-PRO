@@ -1,0 +1,44 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import grievanceRoutes from "./routes/grievanceRoutes.js";
+import departmentRoutes from "./routes/departmentRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import { analyzeGrievance } from "./services/aiService.js";
+
+const app = express();
+
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
+
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/grievances", grievanceRoutes);
+app.use("/api/departments", departmentRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    success: true,
+    message: "Nivara backend is running successfully",
+  });
+});
+
+app.post("/api/ai/analyze-test", async (req, res) => {
+  try {
+    const result = await analyzeGrievance(req.body);
+    res.json({ success: true, analysis: result });
+  } catch (error) {
+    console.error("AI analysis test error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "AI analysis failed",
+    });
+  }
+});
+
+export default app;

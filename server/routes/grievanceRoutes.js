@@ -12,6 +12,12 @@ import {
   escalateGrievance,
   reopenGrievance,
   submitFeedback,
+  analyzeGrievancePreview,
+  checkDuplicateGrievances,
+  getGrievanceMessages,
+  sendGrievanceMessage,
+  addGrievanceEvidence,
+  confirmGrievanceResolution,
 } from "../controllers/grievanceController.js";
 
 const router = express.Router();
@@ -32,10 +38,51 @@ router.get(
   getMyGrievances
 );
 
+router.post(
+  "/ai-analyze",
+  authenticateUser,
+  analyzeGrievancePreview
+);
+router.post(
+  "/check-duplicates",
+  authenticateUser,
+  checkDuplicateGrievances
+);
+
+// ============================================================
+// GRIEVANCE COMMUNICATION
+//
+
 router.get(
   "/:id",
   authenticateUser,
   getGrievanceById
+);
+
+
+// ============================================================
+// GRIEVANCE COMMUNICATION
+// ============================================================
+
+router.get(
+  "/:id/messages",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN"),
+  getGrievanceMessages
+);
+
+router.post(
+  "/:id/messages",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN"),
+  sendGrievanceMessage
+);
+
+router.post(
+  "/:id/evidence",
+  authenticateUser,
+  authorizeRoles("CITIZEN", "OFFICER", "ADMIN", "DEPARTMENT_HEAD"),
+  addGrievanceEvidence
 );
 
 // ============================================================
@@ -49,7 +96,7 @@ router.patch(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    
   ),
   updateGrievanceStatus
 );
@@ -60,7 +107,7 @@ router.post(
   authenticateUser,
   authorizeRoles(
     "ADMIN",
-    "DEPARTMENT_HEAD"
+    
   ),
   assignGrievance
 );
@@ -72,7 +119,6 @@ router.post(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD"
   ),
   escalateGrievance
 );
@@ -85,7 +131,6 @@ router.post(
   authorizeRoles(
     "OFFICER",
     "ADMIN",
-    "DEPARTMENT_HEAD",
     "CITIZEN"
   ),
   reopenGrievance
@@ -93,10 +138,18 @@ router.post(
 
 // Citizen can submit feedback
 router.post(
+  "/:id/confirm-resolution",
+  authenticateUser,
+  authorizeRoles("CITIZEN"),
+  confirmGrievanceResolution
+);
+
+router.post(
   "/:id/feedback",
   authenticateUser,
   authorizeRoles("CITIZEN"),
   submitFeedback
 );
+
 
 export default router;
