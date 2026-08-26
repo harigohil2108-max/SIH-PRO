@@ -1,7 +1,6 @@
 import Grievance from "../models/Grievance.js";
 import Department from "../models/Department.js";
 import User from "../models/User.js";
-import Notification from "../models/Notification.js";
 import { analyzeGrievance as analyzeGrievanceWithAI } from "../services/aiService.js";
 import { findDuplicateGrievances } from "../services/duplicateService.js";
 
@@ -98,22 +97,6 @@ export const createGrievance = async (req, res) => {
 } catch (aiError) {
   console.error("AI analysis skipped:", aiError.message);
 }
-
-    // --------------------------------------------------------
-    // CREATE NOTIFICATION FOR CITIZEN
-    // --------------------------------------------------------
-
-    await Notification.create({
-      user: req.user._id,
-
-      title: "Grievance Submitted",
-
-      message: `Your grievance ${grievance.grievanceId} has been submitted successfully.`,
-
-      type: "GRIEVANCE_SUBMITTED",
-
-      relatedGrievance: grievance._id,
-    });
 
     res.status(201).json({
       success: true,
@@ -261,38 +244,6 @@ export const updateGrievanceStatus = async (req, res) => {
 
     await grievance.save();
 
-    // --------------------------------------------------------
-    // NOTIFY CITIZEN ABOUT STATUS CHANGE
-    // --------------------------------------------------------
-
-    let notificationType = "STATUS_UPDATE";
-    let notificationTitle = "Grievance Status Updated";
-
-    if (status === "RESOLVED") {
-      notificationType = "GRIEVANCE_RESOLVED";
-      notificationTitle = "Grievance Resolved";
-    } else if (status === "REOPENED") {
-      notificationType = "GRIEVANCE_REOPENED";
-      notificationTitle = "Grievance Reopened";
-    }
-
-    await Notification.create({
-      user: grievance.citizen,
-
-      title: notificationTitle,
-
-      message:
-        message ||
-        `Your grievance ${grievance.grievanceId} is now ${status.replace(
-          /_/g,
-          " "
-        )}.`,
-
-      type: notificationType,
-
-      relatedGrievance: grievance._id,
-    });
-
     res.json({
       success: true,
       message: "Grievance status updated successfully",
@@ -333,20 +284,6 @@ export const assignGrievance = async (req, res) => {
       });
     }
 
-    // Verify the officer exists and is actually an officer.
-    const officer = await User.findOne({
-      _id: officerId,
-      role: "OFFICER",
-      isActive: true,
-    });
-
-    if (!officer) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or inactive officer",
-      });
-    }
-
     grievance.assignedOfficer = officerId;
 
     if (departmentId) {
@@ -362,38 +299,6 @@ export const assignGrievance = async (req, res) => {
     });
 
     await grievance.save();
-
-    // --------------------------------------------------------
-    // NOTIFY ASSIGNED OFFICER
-    // --------------------------------------------------------
-
-    await Notification.create({
-      user: officer._id,
-
-      title: "New Grievance Assigned",
-
-      message: `Grievance ${grievance.grievanceId} has been assigned to you.`,
-
-      type: "GRIEVANCE_ASSIGNED",
-
-      relatedGrievance: grievance._id,
-    });
-
-    // --------------------------------------------------------
-    // NOTIFY CITIZEN
-    // --------------------------------------------------------
-
-    await Notification.create({
-      user: grievance.citizen,
-
-      title: "Grievance Assigned",
-
-      message: `Your grievance ${grievance.grievanceId} has been assigned to a grievance officer.`,
-
-      type: "GRIEVANCE_ASSIGNED",
-
-      relatedGrievance: grievance._id,
-    });
 
     const updatedGrievance = await Grievance.findById(
       grievance._id
@@ -451,22 +356,6 @@ export const escalateGrievance = async (req, res) => {
 
     await grievance.save();
 
-    // --------------------------------------------------------
-    // NOTIFY CITIZEN ABOUT ESCALATION
-    // --------------------------------------------------------
-
-    await Notification.create({
-      user: grievance.citizen,
-
-      title: "Grievance Escalated",
-
-      message: `Your grievance ${grievance.grievanceId} has been escalated. Reason: ${reason}`,
-
-      type: "ESCALATION",
-
-      relatedGrievance: grievance._id,
-    });
-
     res.json({
       success: true,
       message: "Grievance escalated successfully",
@@ -520,24 +409,6 @@ export const reopenGrievance = async (req, res) => {
     });
 
     await grievance.save();
-
-    // --------------------------------------------------------
-    // NOTIFY CITIZEN
-    // --------------------------------------------------------
-
-    await Notification.create({
-      user: grievance.citizen,
-
-      title: "Grievance Reopened",
-
-      message:
-        reason ||
-        `Your grievance ${grievance.grievanceId} has been reopened.`,
-
-      type: "GRIEVANCE_REOPENED",
-
-      relatedGrievance: grievance._id,
-    });
 
     res.json({
       success: true,
