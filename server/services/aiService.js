@@ -1,16 +1,49 @@
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const serverDirectory = path.dirname(fileURLToPath(import.meta.url)).replace(/\\services$/, "");
 dotenv.config({ path: path.join(serverDirectory, ".env") });
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-4-scout-17b-16e-instruct";
 
-const AI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+export const requestGroq = async (messages, jsonMode = false) => {
+  if (!process.env.GROQ_API_KEY) {
+    const error = new Error("Groq API is not configured");
+    error.status = 503;
+    throw error;
+  }
+
+  const response = await fetch(GROQ_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages,
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const error = new Error(data.error?.message || "Groq request failed");
+    error.status = response.status;
+    throw error;
+  }
+
+  const content = data.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    const error = new Error("Groq returned an empty response");
+    error.status = 502;
+    throw error;
+  }
+
+  return content;
+};
 
 const isTemporaryAIError = (error) => {
   const status = error?.status || error?.cause?.status;
@@ -95,25 +128,22 @@ Return ONLY valid JSON in this exact structure:
       })
       : [];
 
-    const response = await ai.models.generateContent({
-  model: AI_MODEL,
-  contents: [{
-    role: "user",
-    parts: [
-      { text: prompt },
-      ...evidenceParts,
-    ],
-  }],
-  config: {
-    responseMimeType: "application/json",
-  },
-});
+    const content = await requestGroq([{
+      role: "user",
+      content: [
+        { type: "text", text: prompt },
+        ...evidenceParts
+          .filter((part) => part.inlineData.mimeType.startsWith("image/"))
+          .map((part) => ({
+          type: "image_url",
+          image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` },
+          })),
+      ],
+    }], true);
 
-const content = response.text;
-
-return JSON.parse(content);
+    return JSON.parse(content);
   } catch (error) {
-  console.error("========== GEMINI ERROR ==========");
+  console.error("========== GROQ ERROR ==========");
   console.error(error);
   console.error("==================================");
 
@@ -124,30 +154,15 @@ return JSON.parse(content);
 const chatFallback = "Sorry, I'm temporarily unable to respond. Please try again or check the Help & Feedback FAQs.";
 
 export const chatWithAssistant = async ({ message, conversation = [], faqs = [] }) => {
-  if (!process.env.GEMINI_API_KEY) {
-    const error = new Error("Gemini API is not configured");
-    error.status = 503;
-    throw error;
-  }
-
   const faqContext = faqs
     .slice(0, 30)
     .map((faq) => `Question: ${faq.question}\nAnswer: ${faq.answer}`)
     .join("\n\n");
 
-  const contents = [
-    ...conversation.slice(-12).map((item) => ({
-      role: item.role === "assistant" ? "model" : "user",
-      parts: [{ text: item.content }],
-    })),
-    { role: "user", parts: [{ text: message }] },
-  ];
-
-  const response = await ai.models.generateContent({
-    model: AI_MODEL,
-    contents,
-    config: {
-      systemInstruction: `You are Nivara AI Assistant, a helpful assistant for Nivara, an AI-powered public grievance management platform.
+  const messages = [
+    {
+      role: "system",
+      content: `You are Nivara AI Assistant, a helpful assistant for Nivara, an AI-powered public grievance management platform.
 
 Help users with submitting grievances, tracking grievances, understanding grievance statuses and IDs, updating grievances, navigating Nivara, and using the platform.
 
@@ -156,15 +171,12 @@ Use the FAQ information below as your primary source for Nivara-specific answers
 FAQ INFORMATION:
 ${faqContext}`,
     },
-  });
+    ...conversation.slice(-12).map((item) => ({
+      role: item.role,
+      content: item.content,
+    })),
+    { role: "user", content: message },
+  ];
 
-  const reply = response.text?.trim();
-
-  if (!reply) {
-    const error = new Error("Gemini returned an empty response");
-    error.status = 502;
-    throw error;
-  }
-
-  return reply;
+  return requestGroq(messages);
 };

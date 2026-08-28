@@ -10,6 +10,7 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "groq-sdk": "^1.6.0",
     "maplibre-gl": "^6.6.0",
     "ngrok": "^5.0.0-beta.2",
     "react": "^19.0.0",
