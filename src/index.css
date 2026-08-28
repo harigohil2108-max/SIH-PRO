@@ -7,9 +7,39 @@
 
 body {
   font-family: 'Inter', sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+html.dark body {
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.app-sidebar {
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+}
+
+html.dark .app-sidebar {
+  background-color: #0f172a;
+  border-right-color: rgb(51 65 85 / 0.8);
+}
+
+select,
+.theme-option {
+  color-scheme: light;
+}
+
+html.dark select,
+html.dark .theme-option,
+html.dark option {
+  color-scheme: dark;
+  background-color: #1e293b;
+  color: #e2e8f0;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-.dark ::-webkit-scrollbar-thumb { background: #475569; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }

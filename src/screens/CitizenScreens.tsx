@@ -529,7 +529,6 @@ const addEvidenceFiles = (files: FileList | File[]) => {
   if (!nextFiles.length) return;
   setEvidenceFiles((current) => [...current, ...nextFiles.map((file) => file.name)]);
   setEvidencePreviews((current) => [...current, ...nextFiles.map((file) => ({ name: file.name, type: file.type, url: URL.createObjectURL(file) }))]);
-  void runAIAnalysis();
 };
 
 const removeEvidenceFile = (name: string) => {
@@ -725,21 +724,21 @@ const updateManualLocation = (field: "address" | "city" | "district" | "state" |
   }));
 };
 
-const runAIAnalysis = async (finalAnalysis = false) => {
+const runAIAnalysis = async () => {
   const description = text.trim();
 
   if (!description) {
     setAiRecommendation(null);
     setDuplicateMatches([]);
-    return;
+    return null;
   }
 
-  if (typeof document !== "undefined" && document.hidden) return;
+  if (typeof document !== "undefined" && document.hidden) return null;
 
   const token = localStorage.getItem("token");
   if (!token) {
     setAiAnalysisError("Please login again.");
-    return;
+    return null;
   }
 
   aiAbortController.current?.abort();
@@ -815,6 +814,8 @@ const runAIAnalysis = async (finalAnalysis = false) => {
         setDuplicateMatches([]);
       }
     }
+
+    return result.aiAnalysis || null;
   } catch (error) {
     if (controller.signal.aborted) return;
 
@@ -822,55 +823,13 @@ const runAIAnalysis = async (finalAnalysis = false) => {
     setAiAnalysisError(
       error instanceof Error ? error.message : "Failed to analyze grievance"
     );
+    return null;
   } finally {
     if (requestId === aiRequestId.current) {
       setAiAnalyzing(false);
     }
   }
 };
-
-// Live AI analysis: start shortly after the citizen begins typing,
-// restart for meaningful changes, and cancel while the tab is hidden.
-useEffect(() => {
-  if (!text.trim()) {
-    aiAbortController.current?.abort();
-    setAiRecommendation(null);
-    setDuplicateMatches([]);
-    setAiAnalyzing(false);
-    return;
-  }
-
-  if (typeof document !== "undefined" && document.hidden) return;
-
-  const timer = window.setTimeout(() => {
-    void runAIAnalysis();
-  }, 900);
-
-  return () => {
-    window.clearTimeout(timer);
-    aiAbortController.current?.abort();
-    aiRequestId.current += 1;
-  };
-}, [text, location.address, location.city, location.state]);
-
-useEffect(() => {
-  const handleVisibilityChange = () => {
-    if (document.hidden) {
-      aiAbortController.current?.abort();
-      aiRequestId.current += 1;
-      setAiAnalyzing(false);
-    } else if (text.trim()) {
-      void runAIAnalysis();
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibilityChange);
-
-  return () => {
-    document.removeEventListener("visibilitychange", handleVisibilityChange);
-    aiAbortController.current?.abort();
-  };
-}, [text]);
 
 const handleSubmit = async () => {
   try {
@@ -880,8 +839,9 @@ const handleSubmit = async () => {
     // Always perform one final analysis using the exact latest complaint
     // before creating the grievance. This makes submission the final
     // completion point for the AI analysis.
+    let analysis = aiRecommendation;
     if (text.trim()) {
-      await runAIAnalysis(true);
+      analysis = await runAIAnalysis();
     }
 
     const token = localStorage.getItem("token");
@@ -905,10 +865,10 @@ const handleSubmit = async () => {
 
       description: text.trim(),
 
-      category: aiRecommendation?.category || undefined,
-      subcategory: aiRecommendation?.subcategory || undefined,
+      category: analysis?.category || undefined,
+      subcategory: analysis?.subcategory || undefined,
 
-      aiAnalysis: aiRecommendation || undefined,
+      aiAnalysis: analysis || undefined,
 
       duplicateMatches: duplicateMatches.map((match) => ({
         grievance: match.grievance,
@@ -990,34 +950,34 @@ const handleSubmit = async () => {
           <div className="col-span-2 space-y-4">
             <SectionCard title="Describe Your Issue">
               <div className="flex gap-2 mb-4">
-                <button onClick={() => { stopVoiceInput(); setChooseVoiceLanguage(false); setInputMode("text"); }} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border font-medium transition-colors ${inputMode === "text" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 dark:border-slate-700"}`}>
+                <button onClick={() => { stopVoiceInput(); setChooseVoiceLanguage(false); setInputMode("text"); }} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border font-medium transition-colors ${inputMode === "text" ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}>
                   ✏ Type Complaint
                 </button>
-                <button onClick={toggleVoiceInput} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border font-medium transition-colors ${inputMode === "voice" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 dark:border-slate-700"}`}>
+                <button onClick={toggleVoiceInput} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border font-medium transition-colors ${inputMode === "voice" ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}>
                   🎙 {isListening ? "Stop Voice Input" : "Voice Input"}
                 </button>
-                <label className="ml-auto flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-600">
+                <label className="ml-auto flex items-center gap-2 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300">
                   🌐 Language:
-                  <select value={lang} onChange={(e) => { setLang(e.target.value); setVoiceLanguageReady(true); }} className="bg-transparent font-semibold outline-none">
-                    {LANGUAGE_OPTIONS.map(([name]) => <option key={name}>{name}</option>)}
+                  <select value={lang} onChange={(e) => { setLang(e.target.value); setVoiceLanguageReady(true); }} className="bg-transparent font-semibold text-slate-700 dark:text-slate-200 outline-none">
+                    {LANGUAGE_OPTIONS.map(([name]) => <option key={name} className="theme-option">{name}</option>)}
                   </select>
                 </label>
               </div>
 
               {inputMode === "voice" ? (
-                <div className="flex flex-col items-center justify-center h-40 bg-blue-50 rounded-xl border-2 border-dashed border-blue-200">
+                <div className="flex flex-col items-center justify-center h-40 bg-blue-50 dark:bg-blue-950/30 rounded-xl border-2 border-dashed border-blue-200 dark:border-blue-800">
                   {chooseVoiceLanguage && !isListening ? (
                     <>
-                      <p className="text-sm text-slate-600 font-medium">Choose your speaking language</p>
-                      <select value={lang} onChange={(e) => setLang(e.target.value)} className="mt-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none">
-                        {LANGUAGE_OPTIONS.map(([name]) => <option key={name}>{name}</option>)}
+                      <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Choose your speaking language</p>
+                      <select value={lang} onChange={(e) => setLang(e.target.value)} className="mt-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 outline-none">
+                        {LANGUAGE_OPTIONS.map(([name]) => <option key={name} className="theme-option">{name}</option>)}
                       </select>
                       <button type="button" onClick={startVoiceInput} className="mt-2 rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">Start Voice Input</button>
                     </>
                   ) : (
                     <>
                       <button type="button" onClick={toggleVoiceInput} className={`w-14 h-14 rounded-full ${isListening ? "bg-red-500 animate-pulse" : "bg-slate-400"} flex items-center justify-center text-white text-2xl mb-2`} aria-label={isListening ? "Stop voice input" : "Choose voice language"}>🎙</button>
-                      <p className="text-sm text-slate-600 font-medium">{isListening ? "Recording... Speak your grievance" : "Tap the Voice Input button to choose a language"}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">{isListening ? "Recording... Speak your grievance" : "Tap the Voice Input button to choose a language"}</p>
                       <p className="text-xs text-slate-400 mt-1">{isListening ? `${lang} selected • Tap to stop` : "Your speech will be added to the complaint"}</p>
                     </>
                   )}
@@ -1032,7 +992,7 @@ const handleSubmit = async () => {
                   }}
                   rows={6}
                   placeholder="Describe your grievance in your own words... (e.g., There is a large pothole near the main gate that has been there for 5 days)"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 resize-none outline-none focus:border-blue-400 focus:bg-white dark:bg-slate-800"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none outline-none focus:border-blue-400 focus:bg-slate-50 dark:focus:bg-slate-800"
                 />
               )}
 
@@ -1046,13 +1006,21 @@ const handleSubmit = async () => {
           </div>
 
           <div className="space-y-4">
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/40 dark:to-blue-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-purple-600">✦</span>
-                <span className="text-sm font-semibold text-purple-800">AI Analysis</span>
-                <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold">LIVE</span>
+                <span className="text-sm font-semibold text-purple-800 dark:text-purple-300">AI Analysis</span>
+                <span className="text-[10px] bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-semibold">ON REQUEST</span>
               </div>
-              <p className="text-xs text-slate-600 mb-3">AI automatically extracts key information as you type.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">Analyze your complaint when you are ready. Submission also runs analysis automatically.</p>
+              <button
+                type="button"
+                onClick={() => void runAIAnalysis()}
+                disabled={aiAnalyzing || !text.trim()}
+                className="mb-3 w-full rounded-md bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {aiAnalyzing ? "Analyzing..." : "Analyze with AI"}
+              </button>
 
               <div className="space-y-2">
                 {[
@@ -1081,9 +1049,9 @@ const handleSubmit = async () => {
               </div>
 
               {aiRecommendation?.summary && (
-                <div className="mt-3 pt-3 border-t border-purple-100">
+                <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Summary</p>
-                  <p className="text-xs text-slate-600 leading-relaxed">{aiRecommendation.summary}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{aiRecommendation.summary}</p>
                 </div>
               )}
 
@@ -1094,9 +1062,9 @@ const handleSubmit = async () => {
               <p className="text-[10px] text-slate-400 mt-3 flex items-center gap-1">ⓘ AI-extracted • Review before submitting</p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 rounded-xl p-4">
-              <p className="text-xs font-semibold text-slate-700 mb-2">💬 AI Assistant</p>
-              <p className="text-xs text-slate-600 leading-relaxed italic">"Tell us what happened. You can describe the problem naturally in your own language."</p>
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-2">💬 AI Assistant</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic">"Tell us what happened. You can describe the problem naturally in your own language."</p>
             </div>
           </div>
         </div>
@@ -1440,7 +1408,7 @@ const handleSubmit = async () => {
               {aiAnalyzing
                 ? "✦ AI is analyzing your complaint..."
                 : aiRecommendation
-                  ? "✓ Live AI analysis updated"
+                  ? "✓ AI analysis updated"
                   : text.trim()
                     ? "✦ AI analysis will start automatically"
                     : "Start typing to begin AI analysis"}

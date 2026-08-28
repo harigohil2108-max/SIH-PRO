@@ -8,6 +8,7 @@ import userRoutes from "./routes/userRoutes.js";
 import grievanceRoutes from "./routes/grievanceRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import supportRoutes from "./routes/supportRoutes.js";
 import { analyzeGrievance } from "./services/aiService.js";
 
 import connectDB from "./config/db.js";
@@ -56,8 +57,6 @@ const initializeApp = async () => {
   await backfillExistingSla();
 };
 
-initializeApp();
-
 const app = express();
 
 // ============================================================
@@ -77,6 +76,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/grievances", grievanceRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/support", supportRoutes);
 
 // ============================================================
 // HEALTH & TEST ENDPOINTS
@@ -113,6 +113,17 @@ app.post("/api/ai/analyze-test", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Nivara server running on http://localhost:${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await initializeApp();
+
+    app.listen(PORT, () => {
+      console.log(`Nivara server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server startup aborted until MongoDB is available.");
+    process.exitCode = 1;
+  }
+};
+
+startServer();

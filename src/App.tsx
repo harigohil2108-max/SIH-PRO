@@ -4,6 +4,9 @@ import AuthScreens from "./screens/AuthScreens";
 import { getCurrentUser } from "./screens/services/authService";
 import { getUnreadNotificationCount } from "./screens/services/notificationService";
 import Profile from "./screens/Profile";
+import Settings from "./screens/settings";
+import HelpSupport from "./screens/HelpSupport";
+import { translateDocument } from "./i18n";
 
 // Citizen screens
 import {
@@ -151,21 +154,21 @@ function Sidebar({
 
   return (
     <aside
-      className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 transition-all duration-200 flex-shrink-0"
+      className="app-sidebar flex flex-col h-full transition-all duration-200 flex-shrink-0"
       style={{
-        width: open ? 236 : 0,
+        width: open ? 216 : 0,
         overflow: "hidden",
       }}
     >
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-[#0f2b4e] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700/80 flex-shrink-0">
+        <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           N
         </div>
         <div>
           <div className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight whitespace-nowrap">
             Nivara
           </div>
-          <div className="text-[10px] text-slate-400 tracking-widest uppercase whitespace-nowrap">
+          <div className="text-[9px] text-slate-400 tracking-widest uppercase whitespace-nowrap">
             AI Civic Platform
           </div>
         </div>
@@ -174,7 +177,7 @@ function Sidebar({
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
         {sections.map((sec) => (
           <div key={sec.section}>
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 tracking-widest px-2 mb-1 whitespace-nowrap">
+            <p className="text-[9px] font-semibold text-slate-500 tracking-widest px-2 mb-1 whitespace-nowrap">
               {sec.section}
             </p>
             {sec.items.map((item) => {
@@ -183,9 +186,9 @@ function Sidebar({
                 <button
                   key={item.label}
                   onClick={() => navigate(item.screen)}
-                  className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors text-left whitespace-nowrap ${
+                    className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-md text-xs transition-colors text-left whitespace-nowrap ${
                     active
-                      ? "bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-semibold"
+                      ? "bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 font-semibold"
                       : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
                   }`}
                 >
@@ -203,7 +206,7 @@ function Sidebar({
         ))}
       </nav>
 
-      <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex-shrink-0">
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700/80 flex-shrink-0">
         <p className="text-[10px] text-slate-400 whitespace-nowrap">Official Gov Portal</p>
         <p className="text-[10px] text-slate-400 whitespace-nowrap">v1.2.4 • Secure SSL</p>
       </div>
@@ -219,6 +222,25 @@ type AuthUser = {
   department?: string | null;
   designation?: string | null;
 };
+
+type AppPreferences = {
+  language: "en" | "hi";
+  theme: "system" | "light" | "dark";
+  fontSize: "Small" | "Medium" | "Large";
+};
+
+function loadPreferences(): AppPreferences {
+  try {
+    const saved = JSON.parse(localStorage.getItem("nivara-settings") || "{}");
+    return {
+      language: saved.language === "Hindi" ? "hi" : "en",
+      theme: saved.theme === "light" || saved.theme === "dark" ? saved.theme : "system",
+      fontSize: saved.fontSize === "Small" || saved.fontSize === "Large" ? saved.fontSize : "Medium",
+    };
+  } catch {
+    return { language: "en", theme: "system", fontSize: "Medium" };
+  }
+}
 
 function Topbar({
   role,
@@ -274,7 +296,7 @@ function Topbar({
       .toUpperCase() || "U";
 
   return (
-    <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-4 flex-shrink-0">
+    <header className="h-11 bg-white dark:bg-[#0f172a] border-b border-slate-200 dark:border-slate-700/80 flex items-center px-3 gap-3 flex-shrink-0">
       <button
         onClick={onToggle}
         className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex-shrink-0"
@@ -286,7 +308,7 @@ function Topbar({
         </svg>
       </button>
 
-      <div className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+      <div className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
         Dashboard <span className="text-slate-300 dark:text-slate-600 mx-1">/</span>
         <span className="text-slate-900 dark:text-slate-100 font-medium">
           {roleBreadcrumbs[role]}
@@ -314,7 +336,7 @@ function Topbar({
           <input
             type="text"
             placeholder={roleSearch[role]}
-            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 outline-none focus:border-blue-400 focus:bg-white transition-colors"
+            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-blue-400 transition-colors"
           />
         </div>
       </div>
@@ -397,11 +419,32 @@ function PlaceholderScreen({ title }: { title: string }) {
 function renderScreen(
   role: Role,
   screen: string,
-  navigate: (s: string) => void
+  navigate: (s: string) => void,
+  user: AuthUser,
+  isDark: boolean,
+  onThemeChange: (theme: "system" | "light" | "dark") => void,
+  theme: "system" | "light" | "dark",
+  language: "en" | "hi",
+  onLanguageChange: (language: "en" | "hi") => void,
+  onFontSizeChange: (fontSize: "Small" | "Medium" | "Large") => void
 ) {
   const colonIndex = screen.indexOf(":");
   const currentScreen = colonIndex === -1 ? screen : screen.substring(0, colonIndex);
   const grievanceId = colonIndex === -1 ? undefined : screen.substring(colonIndex + 1);
+
+  if (currentScreen === "settings") {
+    return (
+      <Settings
+        theme={theme}
+        onThemeChange={onThemeChange}
+        userName={user.name}
+        userPhone={undefined}
+        language={language}
+        onLanguageChange={onLanguageChange}
+        onFontSizeChange={onFontSizeChange}
+      />
+    );
+  }
 
   if (role === "citizen") {
     switch (currentScreen) {
@@ -417,6 +460,8 @@ function renderScreen(
         return <CitizenNotifications />;
       case "profile":
         return <Profile />;
+      case "help":
+        return <HelpSupport />;
       default:
         return (
           <PlaceholderScreen
@@ -494,7 +539,16 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [screen, setScreen] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isDark, setIsDark] = useState(false);
+  const [preferences, setPreferences] = useState(loadPreferences);
+  const [theme, setTheme] = useState<"system" | "light" | "dark">(preferences.theme);
+  const [language, setLanguage] = useState<"en" | "hi">(preferences.language);
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDark = theme === "dark" || (theme === "system" && systemDark);
+
+  const updateTheme = (nextTheme: "system" | "light" | "dark") => {
+    setTheme(nextTheme);
+    setPreferences((current) => ({ ...current, theme: nextTheme }));
+  };
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   useEffect(() => {
@@ -523,6 +577,34 @@ export default function App() {
       html.classList.remove("dark");
     }
   }, [isDark]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.style.fontSize =
+      preferences.fontSize === "Small" ? "14px" : preferences.fontSize === "Large" ? "18px" : "16px";
+    try {
+      localStorage.setItem(
+        "nivara-settings",
+        JSON.stringify({
+          ...JSON.parse(localStorage.getItem("nivara-settings") || "{}"),
+          language: language === "hi" ? "Hindi" : "English",
+          theme,
+          fontSize: preferences.fontSize,
+        })
+      );
+    } catch {
+      // Ignore unavailable browser storage.
+    }
+  }, [theme, isDark, language, preferences.fontSize]);
+
+  useEffect(() => translateDocument(language), [language]);
 
   useEffect(() => {
     if (!user) {
@@ -595,14 +677,14 @@ export default function App() {
             onToggle={() => setSidebarOpen((open) => !open)}
             activeScreen={screen}
             isDark={isDark}
-            onToggleDark={() => setIsDark((dark) => !dark)}
+            onToggleDark={() => updateTheme(isDark ? "light" : "dark")}
             onLogout={handleLogout}
             unreadNotificationCount={unreadNotificationCount}
             onOpenNotifications={() => navigate("notifications")}
           />
 
           <main className="flex-1 overflow-y-auto bg-slate-100 dark:bg-slate-950">
-            {renderScreen(role, screen, navigate)}
+            {renderScreen(role, screen, navigate, user, isDark, updateTheme, theme, language, setLanguage, (fontSize) => setPreferences((current) => ({ ...current, fontSize })))}
           </main>
         </div>
       </div>

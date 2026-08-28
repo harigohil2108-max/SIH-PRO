@@ -6,8 +6,9 @@ const connectDB = async () => {
 
     console.log("MongoDB connected successfully");
   } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
-    process.exit(1);
+    const message = `MongoDB connection failed: ${error.message}. Check MONGO_URI and whitelist this machine's public IP in MongoDB Atlas Network Access.`;
+    console.error(message);
+    throw new Error(message);
   }
 };
 

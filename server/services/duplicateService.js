@@ -6,9 +6,13 @@ import { fileURLToPath } from "node:url";
 const serverDirectory = path.dirname(fileURLToPath(import.meta.url)).replace(/\\services$/, "");
 dotenv.config({ path: path.join(serverDirectory, ".env") });
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const getAI = () => {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured. Add it to server/.env or update the AI provider configuration.");
+  }
+
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+};
 
 const AI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
@@ -71,7 +75,7 @@ Rules:
 - A score of 0.75 or higher means the grievances are likely duplicates.
 `;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: AI_MODEL,
       contents: prompt,
       config: {
