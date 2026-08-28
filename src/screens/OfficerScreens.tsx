@@ -1,8 +1,10 @@
-import { useState ,useEffect} from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useState, useEffect } from "react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+} from "recharts";
 import {
   KpiCard, SectionCard, AiInsightCard, PageHeader, PrimaryBtn, SecondaryBtn, GhostBtn,
-  StatusBadge, PriorityBadge, Timeline, ChartLegend, FilterChip, SlaIndicator, ScoreBar, AiBadge,
+  StatusBadge, PriorityBadge, Timeline, ChartLegend, FilterChip, SlaIndicator,
 } from "../components/Shared";
 import MapSvg from "../components/MapSvg";
 import { getCurrentUser } from "./services/authService";
@@ -11,9 +13,8 @@ import {
   getGrievanceById,
   getGrievanceMessages,
   sendGrievanceMessage,
+  submitOfficerDecision,
 } from "../services/grievanceService";
-
-
 
 // ─── Officer Dashboard ────────────────────────────────────────────────────────
 export function OfficerDashboard({
@@ -21,10 +22,7 @@ export function OfficerDashboard({
 }: {
   navigate: (screen: string) => void;
 }) {
-  const [currentUser, setCurrentUser] = useState<{
-    name: string;
-  } | null>(null);
-
+  const [currentUser, setCurrentUser] = useState<{ name: string } | null>(null);
   const [grievances, setGrievances] = useState<any[]>([]);
   const [loadingGrievances, setLoadingGrievances] = useState(true);
   const [grievanceError, setGrievanceError] = useState("");
@@ -44,13 +42,9 @@ export function OfficerDashboard({
         setGrievanceError("");
 
         const token = localStorage.getItem("token");
-
-        if (!token) {
-          throw new Error("Authentication token not found.");
-        }
+        if (!token) throw new Error("Authentication token not found.");
 
         const response = await getMyGrievances(token);
-
         const data = response?.grievances || [];
 
         if (mounted) {
@@ -59,420 +53,210 @@ export function OfficerDashboard({
       } catch (err) {
         if (mounted) {
           setGrievanceError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load grievances."
+            err instanceof Error ? err.message : "Failed to load grievances."
           );
         }
       } finally {
-        if (mounted) {
-          setLoadingGrievances(false);
-        }
+        if (mounted) setLoadingGrievances(false);
       }
     };
 
     loadGrievances();
-
     return () => {
       mounted = false;
     };
   }, []);
 
-  // ─────────────────────────────────────────────────────────────
-  // Dynamic monthly grievance trend
-  // ─────────────────────────────────────────────────────────────
-
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   const trendData = monthNames.map((month, monthIndex) => {
     const submitted = grievances.filter((grievance) => {
       if (!grievance.createdAt) return false;
-
-      const date = new Date(grievance.createdAt);
-
-      return date.getMonth() === monthIndex;
+      return new Date(grievance.createdAt).getMonth() === monthIndex;
     }).length;
 
     const resolved = grievances.filter((grievance) => {
-      if (grievance.status !== "RESOLVED") {
-        return false;
-      }
-
-      const resolvedDate =
-        grievance?.resolution?.resolvedAt ||
-        grievance?.updatedAt;
-
+      if (grievance.status !== "RESOLVED") return false;
+      const resolvedDate = grievance?.resolution?.resolvedAt || grievance?.updatedAt;
       if (!resolvedDate) return false;
-
-      const date = new Date(resolvedDate);
-
-      return date.getMonth() === monthIndex;
+      return new Date(resolvedDate).getMonth() === monthIndex;
     }).length;
 
-    return {
-      month,
-      submitted,
-      resolved,
-    };
+    return { month, submitted, resolved };
   });
 
   return (
     <div className="p-6 space-y-5">
-
-      {/* ─────────────────────────────────────────────────────────
-          Header
-      ───────────────────────────────────────────────────────── */}
-
       <PageHeader
-        title={`Welcome back, ${
-          currentUser?.name || "Officer"
-        }`}
+        title={`Welcome back, ${currentUser?.name || "Officer"}`}
         subtitle="Officer Workspace • Real-time Civic SLA Monitoring"
       >
-        <SecondaryBtn
-          onClick={() => navigate("my-assignments")}
-        >
+        <SecondaryBtn onClick={() => navigate("my-assignments")}>
           My Assignments
         </SecondaryBtn>
-
-        <PrimaryBtn
-          onClick={() => navigate("priority-queue")}
-        >
+        <PrimaryBtn onClick={() => navigate("priority-queue")}>
           <span>+</span> View Priority Queue
         </PrimaryBtn>
       </PageHeader>
 
-      {/* ─────────────────────────────────────────────────────────
-          KPI Cards
-      ───────────────────────────────────────────────────────── */}
-
       <div className="flex gap-3 overflow-x-auto pb-1">
-
-        <KpiCard
-          label="Total Grievances"
-          value={String(grievances.length)}
-        />
-
+        <KpiCard label="Total Grievances" value={String(grievances.length)} />
         <KpiCard
           label="High Priority"
           value={String(
-            grievances.filter(
-              (g) =>
-                g.priority === "HIGH" ||
-                g.priority === "CRITICAL"
-            ).length
+            grievances.filter((g) => g.priority === "HIGH" || g.priority === "CRITICAL").length
           )}
         />
-
         <KpiCard
           label="Due / Active"
           value={String(
-            grievances.filter(
-              (g) =>
-                g.status !== "RESOLVED" &&
-                g.status !== "CLOSED"
-            ).length
+            grievances.filter((g) => g.status !== "RESOLVED" && g.status !== "CLOSED").length
           )}
         />
-
         <KpiCard
           label="Resolved"
           value={String(
-            grievances.filter(
-              (g) =>
-                g.status === "RESOLVED" ||
-                g.status === "CLOSED"
-            ).length
+            grievances.filter((g) => g.status === "RESOLVED" || g.status === "CLOSED").length
           )}
         />
-
         <KpiCard
           label="SLA Breached"
-          value={String(
-            grievances.filter(
-              (g) => g.sla?.breached === true
-            ).length
-          )}
+          value={String(grievances.filter((g) => g.sla?.breached === true).length)}
         />
-
         <KpiCard
           label="Assigned"
-          value={String(
-            grievances.filter(
-              (g) => g.assignedOfficer
-            ).length
-          )}
+          value={String(grievances.filter((g) => g.assignedOfficer).length)}
         />
-
       </div>
 
-      {/* ─────────────────────────────────────────────────────────
-          Main content
-      ───────────────────────────────────────────────────────── */}
-
       <div className="grid grid-cols-3 gap-5">
-
-        {/* LEFT */}
         <div className="col-span-2 space-y-5">
-
-          {/* ─────────────────────────────────────────────────────
-              Real grievance list
-          ───────────────────────────────────────────────────── */}
-
           <SectionCard
             title="Recent Grievances"
             subtitle="Latest grievances from the platform"
             extra={
-              <GhostBtn
-                onClick={() =>
-                  navigate("priority-queue")
-                }
-              >
+              <GhostBtn onClick={() => navigate("priority-queue")}>
                 View all →
               </GhostBtn>
             }
           >
-
             {loadingGrievances ? (
-
               <div className="py-12 text-center">
-                <p className="text-sm text-slate-500">
-                  Loading grievances...
-                </p>
+                <p className="text-sm text-slate-500">Loading grievances...</p>
               </div>
-
             ) : grievanceError ? (
-
               <div className="py-12 text-center">
-                <p className="text-sm text-red-600">
-                  Unable to load grievances
-                </p>
-
-                <p className="text-xs text-slate-500 mt-1">
-                  {grievanceError}
-                </p>
+                <p className="text-sm text-red-600">Unable to load grievances</p>
+                <p className="text-xs text-slate-500 mt-1">{grievanceError}</p>
               </div>
-
             ) : grievances.length === 0 ? (
-
               <div className="py-12 text-center">
-                <p className="text-sm text-slate-500">
-                  No grievances found.
-                </p>
+                <p className="text-sm text-slate-500">No grievances found.</p>
               </div>
-
             ) : (
-
               <div className="overflow-x-auto">
-
                 <table className="w-full text-sm">
-
                   <thead>
                     <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
-
-                      {[
-                        "ID",
-                        "Category",
-                        "Priority",
-                        "Status",
-                        "Assigned",
-                        "Created",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="text-left font-medium pb-2 pr-3"
-                        >
+                      {["ID", "Category", "Priority", "Status", "Assigned", "Created"].map((h) => (
+                        <th key={h} className="text-left font-medium pb-2 pr-3">
                           {h}
                         </th>
                       ))}
-
                     </tr>
                   </thead>
-
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-
                     {grievances
                       .slice()
                       .sort(
                         (a, b) =>
-                          new Date(
-                            b.createdAt
-                          ).getTime() -
-                          new Date(
-                            a.createdAt
-                          ).getTime()
+                          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                       )
                       .slice(0, 6)
                       .map((g) => {
-
+                        const targetId = g._id || g.grievanceId;
                         const createdDate = g.createdAt
-                          ? new Date(
-                              g.createdAt
-                            ).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "2-digit",
-                                month: "short",
-                              }
-                            )
+                          ? new Date(g.createdAt).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                            })
                           : "—";
 
                         const assignedName =
-                          typeof g.assignedOfficer ===
-                          "object"
+                          typeof g.assignedOfficer === "object"
                             ? g.assignedOfficer?.name
                             : g.assignedOfficer
-                              ? "Assigned"
-                              : "Unassigned";
+                            ? "Assigned"
+                            : "Unassigned";
 
                         return (
                           <tr
-                            key={
-                              g._id ||
-                              g.grievanceId
-                            }
+                            key={targetId}
                             className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
-                            onClick={() =>
-                              navigate(
-                                `grievance-detail:${g._id || g.grievanceId}`
-                              )
-                            }
+                            onClick={() => navigate(`grievance-detail:${targetId}`)}
                           >
-
                             <td className="py-2.5 pr-3 font-mono text-xs text-blue-600 font-semibold">
-                              {g.grievanceId ||
-                                g._id}
+                              {g.grievanceId || g._id}
                             </td>
-
                             <td className="py-2.5 pr-3 text-slate-700 dark:text-slate-300 text-xs">
-                              {g.category ||
-                                "Uncategorized"}
+                              {g.category || "Uncategorized"}
                             </td>
-
                             <td className="py-2.5 pr-3">
-                              <PriorityBadge
-                                priority={
-                                  g.priority ||
-                                  "MEDIUM"
-                                }
-                              />
+                              <PriorityBadge priority={g.priority || "MEDIUM"} />
                             </td>
-
                             <td className="py-2.5 pr-3">
-                              <StatusBadge
-                                status={
-                                  g.status ||
-                                  "SUBMITTED"
-                                }
-                              />
+                              <StatusBadge status={g.status || "SUBMITTED"} />
                             </td>
-
                             <td className="py-2.5 pr-3 text-xs text-slate-500">
                               {assignedName}
                             </td>
-
                             <td className="py-2.5 text-xs text-slate-500">
                               {createdDate}
                             </td>
-
                           </tr>
                         );
                       })}
-
                   </tbody>
-
                 </table>
-
               </div>
-
             )}
-
           </SectionCard>
-
-          {/* ─────────────────────────────────────────────────────
-              Dynamic Grievance Trends
-          ───────────────────────────────────────────────────── */}
 
           <SectionCard
             title="Grievance Trends"
             subtitle="Monthly submitted vs resolved volume"
           >
-
             <ChartLegend
               items={[
-                {
-                  color: "#2563eb",
-                  label: "Submitted",
-                },
-                {
-                  color: "#16a34a",
-                  label: "Resolved",
-                },
+                { color: "#2563eb", label: "Submitted" },
+                { color: "#16a34a", label: "Resolved" },
               ]}
             />
-
-            <ResponsiveContainer
-              width="100%"
-              height={200}
-            >
-
+            <ResponsiveContainer width="100%" height={200}>
               <LineChart
                 data={trendData}
-                margin={{
-                  top: 4,
-                  right: 4,
-                  left: -20,
-                  bottom: 0,
-                }}
+                margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
               >
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                />
-
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis
                   dataKey="month"
-                  tick={{
-                    fontSize: 11,
-                    fill: "#94a3b8",
-                  }}
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
                   axisLine={false}
                   tickLine={false}
                 />
-
                 <YAxis
                   allowDecimals={false}
-                  tick={{
-                    fontSize: 11,
-                    fill: "#94a3b8",
-                  }}
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
                   axisLine={false}
                   tickLine={false}
                 />
-
                 <Tooltip
                   contentStyle={{
                     borderRadius: 8,
-                    border:
-                      "1px solid #e2e8f0",
+                    border: "1px solid #e2e8f0",
                     fontSize: 12,
                   }}
                 />
-
                 <Line
                   type="monotone"
                   dataKey="submitted"
@@ -481,7 +265,6 @@ export function OfficerDashboard({
                   dot={false}
                   name="Submitted"
                 />
-
                 <Line
                   type="monotone"
                   dataKey="resolved"
@@ -490,155 +273,93 @@ export function OfficerDashboard({
                   dot={false}
                   name="Resolved"
                 />
-
               </LineChart>
-
             </ResponsiveContainer>
-
           </SectionCard>
-
         </div>
 
-        {/* RIGHT */}
         <div className="space-y-4">
-
-          {/* ─────────────────────────────────────────────────────
-              SLA
-          ───────────────────────────────────────────────────── */}
-
           <SectionCard title="SLA Compliance Status">
-  {(() => {
-    const now = Date.now();
+            {(() => {
+              const now = Date.now();
+              const assignedCount = grievances.filter((g) => Boolean(g.assignedOfficer)).length;
+              const breachedCount = grievances.filter((g) => g?.sla?.breached === true).length;
+              const nearSlaCount = grievances.filter((g) => {
+                if (!g?.sla?.dueAt || g?.sla?.breached === true) return false;
+                const remaining = new Date(g.sla.dueAt).getTime() - now;
+                return remaining > 0 && remaining <= 24 * 60 * 60 * 1000;
+              }).length;
 
-    const assignedCount = grievances.filter(
-      (g) => Boolean(g.assignedOfficer)
-    ).length;
+              const withinSlaCount = grievances.filter((g) => {
+                if (!g?.sla?.dueAt || g?.sla?.breached === true) return false;
+                return new Date(g.sla.dueAt).getTime() - now > 24 * 60 * 60 * 1000;
+              }).length;
 
-    const breachedCount = grievances.filter(
-      (g) => g?.sla?.breached === true
-    ).length;
+              const slaChartData = [
+                { name: "Within SLA", value: withinSlaCount, color: "#16a34a" },
+                { name: "Near SLA", value: nearSlaCount, color: "#d97706" },
+                { name: "Breached", value: breachedCount, color: "#dc2626" },
+              ];
 
-    const nearSlaCount = grievances.filter((g) => {
-      if (!g?.sla?.dueAt) return false;
-      if (g?.sla?.breached === true) return false;
+              return (
+                <>
+                  <div className="relative flex justify-center mb-4">
+                    <PieChart width={160} height={160}>
+                      <Pie
+                        data={slaChartData}
+                        innerRadius={45}
+                        outerRadius={72}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {slaChartData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                        {assignedCount}
+                      </span>
+                      <span className="text-xs text-slate-500">Assigned</span>
+                    </div>
+                  </div>
 
-      const dueAt = new Date(g.sla.dueAt).getTime();
-      const remaining = dueAt - now;
-
-      return remaining > 0 && remaining <= 24 * 60 * 60 * 1000;
-    }).length;
-
-    const withinSlaCount = grievances.filter((g) => {
-      if (!g?.sla?.dueAt) return false;
-      if (g?.sla?.breached === true) return false;
-
-      const dueAt = new Date(g.sla.dueAt).getTime();
-
-      return (
-        dueAt - now > 24 * 60 * 60 * 1000
-      );
-    }).length;
-
-    const slaChartData = [
-      {
-        name: "Within SLA",
-        value: withinSlaCount,
-        color: "#16a34a",
-      },
-      {
-        name: "Near SLA",
-        value: nearSlaCount,
-        color: "#d97706",
-      },
-      {
-        name: "Breached",
-        value: breachedCount,
-        color: "#dc2626",
-      },
-    ];
-
-    return (
-      <>
-        <div className="relative flex justify-center mb-4">
-          <PieChart width={160} height={160}>
-            <Pie
-              data={slaChartData}
-              innerRadius={45}
-              outerRadius={72}
-              dataKey="value"
-              stroke="none"
-            >
-              {slaChartData.map((entry) => (
-                <Cell
-                  key={entry.name}
-                  fill={entry.color}
-                />
-              ))}
-            </Pie>
-          </PieChart>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              {assignedCount}
-            </span>
-
-            <span className="text-xs text-slate-500">
-              Assigned
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {slaChartData.map((item) => (
-            <div
-              key={item.name}
-              className="flex items-center justify-between text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    background: item.color,
-                  }}
-                />
-
-                <span className="text-slate-600 dark:text-slate-400">
-                  {item.name}
-                </span>
-              </div>
-
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                {item.value}
-              </span>
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  })()}
-</SectionCard>
-
-          {/* ─────────────────────────────────────────────────────
-              AI Insight
-              Keep this static for now because you asked not to
-              make AI-related changes yet.
-          ───────────────────────────────────────────────────── */}
+                  <div className="space-y-2">
+                    {slaChartData.map((item) => (
+                      <div
+                        key={item.name}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ background: item.color }}
+                          />
+                          <span className="text-slate-600 dark:text-slate-400">
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </SectionCard>
 
           <AiInsightCard
             title="AI-Assisted Dispatch Insight"
-            text={
-              <>
-                AI analysis is available when
-                grievance analysis is enabled.
-              </>
-            }
+            text={<>AI analysis is available when grievance analysis is enabled.</>}
             disclaimer="AI insight • Verify field conditions before action"
             actions={
               <>
                 <button className="text-xs bg-blue-700 text-white px-3 py-1.5 rounded-lg hover:bg-blue-800">
                   Accept
                 </button>
-
                 <button className="text-xs border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50">
                   Override
                 </button>
@@ -646,114 +367,80 @@ export function OfficerDashboard({
             }
           />
 
-          {/* ─────────────────────────────────────────────────────
-              Recent activity
-          ───────────────────────────────────────────────────── */}
-
           <SectionCard title="Recent Activity Timeline">
-  {(() => {
-    const activities = grievances
-      .flatMap((grievance: any) => {
-        const timeline = Array.isArray(grievance.timeline)
-          ? grievance.timeline
-          : [];
+            {(() => {
+              const activities = grievances
+                .flatMap((grievance: any) => {
+                  const timeline = Array.isArray(grievance.timeline)
+                    ? grievance.timeline
+                    : [];
+                  return timeline.map((event: any) => ({
+                    grievance,
+                    event,
+                  }));
+                })
+                .sort((a: any, b: any) => {
+                  const dateA = new Date(
+                    a.event?.timestamp || a.grievance?.updatedAt || a.grievance?.createdAt
+                  ).getTime();
+                  const dateB = new Date(
+                    b.event?.timestamp || b.grievance?.updatedAt || b.grievance?.createdAt
+                  ).getTime();
+                  return dateB - dateA;
+                })
+                .slice(0, 5);
 
-        return timeline.map((event: any) => ({
-          grievance,
-          event,
-        }));
-      })
-      .sort((a: any, b: any) => {
-        const dateA = new Date(
-          a.event?.timestamp || a.grievance?.updatedAt || a.grievance?.createdAt
-        ).getTime();
-
-        const dateB = new Date(
-          b.event?.timestamp || b.grievance?.updatedAt || b.grievance?.createdAt
-        ).getTime();
-
-        return dateB - dateA;
-      })
-      .slice(0, 5);
-
-    if (activities.length === 0) {
-      return (
-        <div className="py-6 text-center">
-          <p className="text-sm text-slate-500">
-            No recent activity available.
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <Timeline
-        steps={activities.map(
-          ({ grievance, event }: any) => {
-            const timestamp = new Date(
-              event?.timestamp ||
-                grievance?.updatedAt ||
-                grievance?.createdAt
-            );
-
-            const time = timestamp.toLocaleString(
-              "en-IN",
-              {
-                day: "2-digit",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
+              if (activities.length === 0) {
+                return (
+                  <div className="py-6 text-center">
+                    <p className="text-sm text-slate-500">No recent activity available.</p>
+                  </div>
+                );
               }
-            );
 
-            const status =
-              event?.status ||
-              grievance?.status ||
-              "SUBMITTED";
+              return (
+                <Timeline
+                  steps={activities.map(({ grievance, event }: any) => {
+                    const timestamp = new Date(
+                      event?.timestamp || grievance?.updatedAt || grievance?.createdAt
+                    );
+                    const time = timestamp.toLocaleString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
 
-            let label = "Grievance Update";
+                    const status =
+                      event?.status || grievance?.status || "SUBMITTED";
 
-            if (status === "SUBMITTED") {
-              label = "Grievance Submitted";
-            } else if (status === "ASSIGNED") {
-              label = "Grievance Assigned";
-            } else if (status === "UNDER_REVIEW") {
-              label = "Under Review";
-            } else if (status === "IN_PROGRESS") {
-              label = "Work In Progress";
-            } else if (status === "RESOLVED") {
-              label = "Grievance Resolved";
-            } else if (status === "REOPENED") {
-              label = "Grievance Reopened";
-            } else if (status === "REJECTED") {
-              label = "Grievance Rejected";
-            } else if (status === "CLOSED") {
-              label = "Grievance Closed";
-            }
+                    let label = "Grievance Update";
+                    if (status === "SUBMITTED") label = "Grievance Submitted";
+                    else if (status === "ASSIGNED") label = "Grievance Assigned";
+                    else if (status === "UNDER_REVIEW") label = "Under Review";
+                    else if (status === "IN_PROGRESS") label = "Work In Progress";
+                    else if (status === "RESOLVED") label = "Grievance Resolved";
+                    else if (status === "REOPENED") label = "Grievance Reopened";
+                    else if (status === "REJECTED") label = "Grievance Rejected";
+                    else if (status === "CLOSED") label = "Grievance Closed";
 
-            return {
-              label,
-              desc:
-                event?.message ||
-                `${grievance?.grievanceId || "Grievance"} — ${
-                  grievance?.title || "Civic complaint"
-                }`,
-              time,
-              done:
-                status === "RESOLVED" ||
-                status === "CLOSED",
-            };
-          }
-        )}
-      />
-    );
-  })()}
-</SectionCard>
-
+                    return {
+                      label,
+                      desc:
+                        event?.message ||
+                        `${grievance?.grievanceId || "Grievance"} — ${
+                          grievance?.title || "Civic complaint"
+                        }`,
+                      time,
+                      done: status === "RESOLVED" || status === "CLOSED",
+                    };
+                  })}
+                />
+              );
+            })()}
+          </SectionCard>
         </div>
-
       </div>
-
     </div>
   );
 }
@@ -778,29 +465,18 @@ export function OfficerMyAssignments({
         setError("");
 
         const user = await getCurrentUser();
-
-        if (!user) {
-          throw new Error("Unable to identify the logged-in officer.");
-        }
+        if (!user) throw new Error("Unable to identify the logged-in officer.");
 
         const token = localStorage.getItem("token");
-
-        if (!token) {
-          throw new Error("Authentication token not found.");
-        }
+        if (!token) throw new Error("Authentication token not found.");
 
         const response = await getMyGrievances(token);
-
         const allGrievances = response?.grievances || [];
-
         const officerId = String(user._id || user.id);
 
         const assigned = allGrievances.filter((grievance: any) => {
           const assignedOfficer = grievance.assignedOfficer;
-
-          if (!assignedOfficer) {
-            return false;
-          }
+          if (!assignedOfficer) return false;
 
           const assignedOfficerId = String(
             typeof assignedOfficer === "object"
@@ -818,20 +494,15 @@ export function OfficerMyAssignments({
       } catch (err) {
         if (mounted) {
           setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load assignments."
+            err instanceof Error ? err.message : "Failed to load assignments."
           );
         }
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
     loadAssignments();
-
     return () => {
       mounted = false;
     };
@@ -839,7 +510,6 @@ export function OfficerMyAssignments({
 
   const formatDate = (date: string) => {
     if (!date) return "—";
-
     return new Date(date).toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
@@ -854,12 +524,9 @@ export function OfficerMyAssignments({
           title="My Assignments"
           subtitle="Grievances currently assigned to you"
         />
-
         <SectionCard>
           <div className="flex items-center justify-center py-16">
-            <p className="text-sm text-slate-500">
-              Loading your assignments...
-            </p>
+            <p className="text-sm text-slate-500">Loading your assignments...</p>
           </div>
         </SectionCard>
       </div>
@@ -873,17 +540,10 @@ export function OfficerMyAssignments({
           title="My Assignments"
           subtitle="Grievances currently assigned to you"
         />
-
         <SectionCard>
           <div className="py-10 text-center">
-            <p className="text-sm font-medium text-red-600">
-              Unable to load assignments
-            </p>
-
-            <p className="text-xs text-slate-500 mt-2">
-              {error}
-            </p>
-
+            <p className="text-sm font-medium text-red-600">Unable to load assignments</p>
+            <p className="text-xs text-slate-500 mt-2">{error}</p>
             <button
               onClick={() => window.location.reload()}
               className="mt-4 text-xs bg-[#0f2b4e] text-white px-4 py-2 rounded-lg"
@@ -906,40 +566,24 @@ export function OfficerMyAssignments({
             : "Grievances currently assigned to you"
         }
       >
-        <SecondaryBtn onClick={() => navigate("officer-dashboard")}>
+        <SecondaryBtn onClick={() => navigate("dashboard")}>
           ← Dashboard
         </SecondaryBtn>
-
         <PrimaryBtn onClick={() => window.location.reload()}>
           Refresh
         </PrimaryBtn>
       </PageHeader>
 
-      {/* Summary */}
       <div className="flex gap-3">
-        <KpiCard
-          label="Assigned to Me"
-          value={String(grievances.length)}
-        />
-
+        <KpiCard label="Assigned to Me" value={String(grievances.length)} />
         <KpiCard
           label="Critical"
-          value={String(
-            grievances.filter(
-              (g) => g.priority === "CRITICAL"
-            ).length
-          )}
+          value={String(grievances.filter((g) => g.priority === "CRITICAL").length)}
         />
-
         <KpiCard
           label="High Priority"
-          value={String(
-            grievances.filter(
-              (g) => g.priority === "HIGH"
-            ).length
-          )}
+          value={String(grievances.filter((g) => g.priority === "HIGH").length)}
         />
-
         <KpiCard
           label="In Progress"
           value={String(
@@ -960,11 +604,9 @@ export function OfficerMyAssignments({
         {grievances.length === 0 ? (
           <div className="py-16 text-center">
             <div className="text-4xl mb-3">✓</div>
-
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               No grievances assigned to you
             </p>
-
             <p className="text-xs text-slate-500 mt-1">
               New assignments will appear here automatically.
             </p>
@@ -974,96 +616,64 @@ export function OfficerMyAssignments({
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
-                  <th className="text-left font-medium pb-3 pr-4">
-                    Grievance ID
-                  </th>
-
-                  <th className="text-left font-medium pb-3 pr-4">
-                    Complaint
-                  </th>
-
-                  <th className="text-left font-medium pb-3 pr-4">
-                    Category
-                  </th>
-
-                  <th className="text-left font-medium pb-3 pr-4">
-                    Priority
-                  </th>
-
-                  <th className="text-left font-medium pb-3 pr-4">
-                    Status
-                  </th>
-
-                  <th className="text-left font-medium pb-3 pr-4">
-                    Submitted
-                  </th>
-
-                  <th className="text-left font-medium pb-3">
-                    Action
-                  </th>
+                  <th className="text-left font-medium pb-3 pr-4">Grievance ID</th>
+                  <th className="text-left font-medium pb-3 pr-4">Complaint</th>
+                  <th className="text-left font-medium pb-3 pr-4">Category</th>
+                  <th className="text-left font-medium pb-3 pr-4">Priority</th>
+                  <th className="text-left font-medium pb-3 pr-4">Status</th>
+                  <th className="text-left font-medium pb-3 pr-4">Submitted</th>
+                  <th className="text-left font-medium pb-3">Action</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                {grievances.map((grievance: any) => (
-                  <tr
-                    key={grievance._id || grievance.grievanceId}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                  >
-                    <td className="py-3 pr-4">
-                      <span className="font-mono text-xs text-blue-600 font-semibold">
-                        {grievance.grievanceId}
-                      </span>
-                    </td>
-
-                    <td className="py-3 pr-4 max-w-xs">
-                      <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
-                        {grievance.title || "Untitled grievance"}
-                      </p>
-
-                      <p className="text-[11px] text-slate-400 mt-1 truncate">
-                        {grievance.description || "No description"}
-                      </p>
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <span className="text-xs text-slate-600 dark:text-slate-400">
-                        {grievance.category || "Uncategorized"}
-                      </span>
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <PriorityBadge
-                        priority={
-                          grievance.priority || "MEDIUM"
-                        }
-                      />
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <StatusBadge
-                        status={grievance.status || "SUBMITTED"}
-                      />
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <span className="text-xs text-slate-500">
-                        {formatDate(grievance.createdAt)}
-                      </span>
-                    </td>
-
-                    <td className="py-3">
-                      <button
-                        onClick={() =>
-                          navigate(`grievance-detail:${grievance._id || grievance.grievanceId}`)
-                        }
-                        className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {grievances.map((grievance: any) => {
+                  const targetId = grievance._id || grievance.grievanceId;
+                  return (
+                    <tr
+                      key={targetId}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                      onClick={() => navigate(`grievance-detail:${targetId}`)}
+                    >
+                      <td className="py-3 pr-4">
+                        <span className="font-mono text-xs text-blue-600 font-semibold">
+                          {grievance.grievanceId || grievance._id}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 max-w-xs">
+                        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
+                          {grievance.title || "Untitled grievance"}
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-1 truncate">
+                          {grievance.description || "No description"}
+                        </p>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                          {grievance.category || "Uncategorized"}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <PriorityBadge priority={grievance.priority || "MEDIUM"} />
+                      </td>
+                      <td className="py-3 pr-4">
+                        <StatusBadge status={grievance.status || "SUBMITTED"} />
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="text-xs text-slate-500">
+                          {formatDate(grievance.createdAt)}
+                        </span>
+                      </td>
+                      <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => navigate(`grievance-detail:${targetId}`)}
+                          className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1096,27 +706,14 @@ export function PriorityQueue({
         setError("");
 
         const user = await getCurrentUser();
-
-        if (!user) {
-          throw new Error("Unable to identify the logged-in officer.");
-        }
+        if (!user) throw new Error("Unable to identify the logged-in officer.");
 
         const token = localStorage.getItem("token");
-
-        if (!token) {
-          throw new Error("Authentication token not found.");
-        }
+        if (!token) throw new Error("Authentication token not found.");
 
         const response = await getMyGrievances(token);
         const allGrievances = response?.grievances || [];
 
-        /*
-         * The backend already restricts officer grievance access
-         * according to the logged-in officer's department.
-         *
-         * We therefore use the returned grievances and sort them
-         * locally for the priority queue.
-         */
         const priorityOrder: Record<string, number> = {
           CRITICAL: 4,
           HIGH: 3,
@@ -1127,7 +724,6 @@ export function PriorityQueue({
         const sorted = [...allGrievances].sort((a, b) => {
           const priorityA =
             priorityOrder[String(a.priority || "MEDIUM").toUpperCase()] || 0;
-
           const priorityB =
             priorityOrder[String(b.priority || "MEDIUM").toUpperCase()] || 0;
 
@@ -1148,28 +744,22 @@ export function PriorityQueue({
       } catch (err) {
         if (mounted) {
           setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load priority queue."
+            err instanceof Error ? err.message : "Failed to load priority queue."
           );
         }
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
     loadPriorityQueue();
-
     return () => {
       mounted = false;
     };
   }, []);
 
-  const getPriority = (grievance: any) => {
-    return String(grievance.priority || "MEDIUM").toUpperCase();
-  };
+  const getPriority = (grievance: any) =>
+    String(grievance.priority || "MEDIUM").toUpperCase();
 
   const getPriorityLabel = (priority: string) => {
     switch (priority) {
@@ -1186,43 +776,29 @@ export function PriorityQueue({
 
   const getAiScore = (grievance: any) => {
     const score = grievance?.aiAnalysis?.priorityScore;
-
     return typeof score === "number" ? score : null;
   };
 
   const getAssignedOfficer = (grievance: any) => {
     const officer = grievance?.assignedOfficer;
-
-    if (!officer) {
-      return "Unassigned";
-    }
-
+    if (!officer) return "Unassigned";
     if (typeof officer === "object") {
       return officer.name || officer.email || "Assigned";
     }
-
     return "Assigned";
   };
 
   const getSlaInfo = (grievance: any) => {
     const dueAt = grievance?.sla?.dueAt;
-
     if (!dueAt) {
-      return {
-        status: "ok" as const,
-        remaining: "Not set",
-      };
+      return { status: "ok" as const, remaining: "Not set" };
     }
 
     const due = new Date(dueAt).getTime();
-    const now = Date.now();
-    const difference = due - now;
+    const difference = due - Date.now();
 
     if (grievance?.sla?.breached || difference <= 0) {
-      return {
-        status: "breach" as const,
-        remaining: "Breached",
-      };
+      return { status: "breach" as const, remaining: "Breached" };
     }
 
     const totalHours = Math.floor(difference / (1000 * 60 * 60));
@@ -1230,28 +806,18 @@ export function PriorityQueue({
     const hours = totalHours % 24;
 
     if (days > 0) {
-      return {
-        status: "ok" as const,
-        remaining: `${days}d ${hours}h left`,
-      };
+      return { status: "ok" as const, remaining: `${days}d ${hours}h left` };
     }
 
     if (hours <= 6) {
-      return {
-        status: "warn" as const,
-        remaining: `${hours}h left`,
-      };
+      return { status: "warn" as const, remaining: `${hours}h left` };
     }
 
-    return {
-      status: "ok" as const,
-      remaining: `${hours}h left`,
-    };
+    return { status: "ok" as const, remaining: `${hours}h left` };
   };
 
   const formatDate = (date: string) => {
     if (!date) return "—";
-
     return new Date(date).toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
@@ -1260,10 +826,7 @@ export function PriorityQueue({
   };
 
   const filteredGrievances = grievances.filter((grievance) => {
-    if (activeFilter === "All") {
-      return true;
-    }
-
+    if (activeFilter === "All") return true;
     return getPriorityLabel(getPriority(grievance)) === activeFilter;
   });
 
@@ -1274,12 +837,9 @@ export function PriorityQueue({
           title="Priority Queue"
           subtitle="Highest-priority grievances in your department"
         />
-
         <SectionCard>
           <div className="flex items-center justify-center py-16">
-            <p className="text-sm text-slate-500">
-              Loading priority queue...
-            </p>
+            <p className="text-sm text-slate-500">Loading priority queue...</p>
           </div>
         </SectionCard>
       </div>
@@ -1293,17 +853,10 @@ export function PriorityQueue({
           title="Priority Queue"
           subtitle="Highest-priority grievances in your department"
         />
-
         <SectionCard>
           <div className="py-12 text-center">
-            <p className="text-sm font-semibold text-red-600">
-              Unable to load priority queue
-            </p>
-
-            <p className="text-xs text-slate-500 mt-2">
-              {error}
-            </p>
-
+            <p className="text-sm font-semibold text-red-600">Unable to load priority queue</p>
+            <p className="text-xs text-slate-500 mt-2">{error}</p>
             <button
               onClick={() => window.location.reload()}
               className="mt-4 text-xs bg-[#0f2b4e] text-white px-4 py-2 rounded-lg"
@@ -1326,25 +879,19 @@ export function PriorityQueue({
             : "Highest-priority grievances in your department"
         }
       >
-        <SecondaryBtn onClick={() => navigate("officer-dashboard")}>
+        <SecondaryBtn onClick={() => navigate("dashboard")}>
           ← Dashboard
         </SecondaryBtn>
-
         <PrimaryBtn onClick={() => window.location.reload()}>
           Refresh
         </PrimaryBtn>
-
         <PrimaryBtn onClick={() => navigate("geo-intelligence")}>
           🗺 View on Map
         </PrimaryBtn>
       </PageHeader>
 
-      {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-500 font-medium">
-          Filter by priority:
-        </span>
-
+        <span className="text-xs text-slate-500 font-medium">Filter by priority:</span>
         {filters.map((filter) => (
           <FilterChip
             key={filter}
@@ -1355,7 +902,6 @@ export function PriorityQueue({
         ))}
       </div>
 
-      {/* Queue */}
       <SectionCard
         title="Department Priority Queue"
         subtitle={`${filteredGrievances.length} grievance${
@@ -1365,11 +911,9 @@ export function PriorityQueue({
         {filteredGrievances.length === 0 ? (
           <div className="py-16 text-center">
             <div className="text-4xl mb-3">✓</div>
-
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               No grievances in this queue
             </p>
-
             <p className="text-xs text-slate-500 mt-1">
               There are currently no grievances matching this priority filter.
             </p>
@@ -1380,71 +924,49 @@ export function PriorityQueue({
               <thead>
                 <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
                   {[
-                    "Grievance ID",
-                    "Complaint",
-                    "Category",
-                    "Priority",
-                    "AI Score",
-                    "SLA",
-                    "Status",
-                    "Assigned",
-                    "Submitted",
-                    "Action",
+                    "Grievance ID", "Complaint", "Category", "Priority",
+                    "AI Score", "SLA", "Status", "Assigned", "Submitted", "Action",
                   ].map((heading) => (
-                    <th
-                      key={heading}
-                      className="text-left font-medium pb-3 pr-3"
-                    >
+                    <th key={heading} className="text-left font-medium pb-3 pr-3">
                       {heading}
                     </th>
                   ))}
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
                 {filteredGrievances.map((grievance) => {
+                  const targetId = grievance._id || grievance.grievanceId;
                   const priority = getPriority(grievance);
                   const aiScore = getAiScore(grievance);
                   const sla = getSlaInfo(grievance);
 
                   return (
                     <tr
-                      key={grievance._id || grievance.grievanceId}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      key={targetId}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                      onClick={() => navigate(`grievance-detail:${targetId}`)}
                     >
-                      {/* ID */}
                       <td className="py-3 pr-3">
                         <span className="font-mono text-xs text-blue-600 font-semibold">
                           {grievance.grievanceId || "—"}
                         </span>
                       </td>
-
-                      {/* Complaint */}
                       <td className="py-3 pr-3 max-w-xs">
                         <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">
                           {grievance.title || "Untitled grievance"}
                         </p>
-
                         <p className="text-[11px] text-slate-400 mt-1 truncate">
                           {grievance.description || "No description"}
                         </p>
                       </td>
-
-                      {/* Category */}
                       <td className="py-3 pr-3">
                         <span className="text-xs text-slate-600 dark:text-slate-400">
                           {grievance.category || "Uncategorized"}
                         </span>
                       </td>
-
-                      {/* Priority */}
                       <td className="py-3 pr-3">
-                        <PriorityBadge
-                          priority={getPriorityLabel(priority)}
-                        />
+                        <PriorityBadge priority={getPriorityLabel(priority)} />
                       </td>
-
-                      {/* AI Score */}
                       <td className="py-3 pr-3">
                         {aiScore !== null ? (
                           <div className="flex items-center gap-1.5">
@@ -1454,61 +976,37 @@ export function PriorityQueue({
                                 style={{
                                   width: `${aiScore}%`,
                                   background:
-                                    aiScore > 85
-                                      ? "#ef4444"
-                                      : aiScore > 70
-                                      ? "#f59e0b"
-                                      : "#3b82f6",
+                                    aiScore > 85 ? "#ef4444" : aiScore > 70 ? "#f59e0b" : "#3b82f6",
                                 }}
                               />
                             </div>
-
                             <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                               {aiScore}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">
-                            —
-                          </span>
+                          <span className="text-xs text-slate-400">—</span>
                         )}
                       </td>
-
-                      {/* SLA */}
                       <td className="py-3 pr-3">
-                        <SlaIndicator
-                          status={sla.status}
-                          remaining={sla.remaining}
-                        />
+                        <SlaIndicator status={sla.status} remaining={sla.remaining} />
                       </td>
-
-                      {/* Status */}
                       <td className="py-3 pr-3">
-                        <StatusBadge
-                          status={grievance.status || "SUBMITTED"}
-                        />
+                        <StatusBadge status={grievance.status || "SUBMITTED"} />
                       </td>
-
-                      {/* Assigned */}
                       <td className="py-3 pr-3">
                         <span className="text-xs text-slate-500">
                           {getAssignedOfficer(grievance)}
                         </span>
                       </td>
-
-                      {/* Submitted */}
                       <td className="py-3 pr-3">
                         <span className="text-xs text-slate-500">
                           {formatDate(grievance.createdAt)}
                         </span>
                       </td>
-
-                      {/* Action */}
-                      <td className="py-3">
+                      <td className="py-3" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() =>
-                            navigate(`grievance-detail:${grievance._id || grievance.grievanceId}`)
-                          }
+                          onClick={() => navigate(`grievance-detail:${targetId}`)}
                           className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50"
                         >
                           View
@@ -1527,6 +1025,7 @@ export function PriorityQueue({
 }
 
 // ─── Grievance Detail (Officer) ───────────────────────────────────────────────
+// ─── Grievance Detail (Officer) ───────────────────────────────────────────────
 export function OfficerGrievanceDetail({
   navigate,
   grievanceId,
@@ -1541,10 +1040,13 @@ export function OfficerGrievanceDetail({
   const [tab, setTab] = useState<"overview" | "ai" | "communication" | "resolution">("overview");
   const [humanPriority, setHumanPriority] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
+  const [submittingDecision, setSubmittingDecision] = useState(false);
+  const [decisionFeedback, setDecisionFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
   const [messages, setMessages] = useState<any[]>([]);
-const [messageText, setMessageText] = useState("");
-const [messagesLoading, setMessagesLoading] = useState(false);
-const [sendingMessage, setSendingMessage] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     getCurrentUser()
@@ -1579,88 +1081,105 @@ const [sendingMessage, setSendingMessage] = useState(false);
     };
 
     loadGrievance();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [grievanceId]);
 
   useEffect(() => {
-  const loadMessages = async () => {
-    if (!grievanceId) return;
+    const loadMessages = async () => {
+      if (!grievanceId) return;
+
+      try {
+        setMessagesLoading(true);
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("Authentication token not found.");
+
+        const response = await getGrievanceMessages(token, grievanceId);
+        setMessages(response?.messages || []);
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+      } finally {
+        setMessagesLoading(false);
+      }
+    };
+
+    loadMessages();
+  }, [grievanceId]);
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !grievanceId) return;
 
     try {
-      setMessagesLoading(true);
-
+      setSendingMessage(true);
       const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found.");
 
-      if (!token) {
-        throw new Error("Authentication token not found.");
-      }
-
-      const response = await getGrievanceMessages(
+      const response = await sendGrievanceMessage(
         token,
-        grievanceId
+        grievanceId,
+        messageText.trim()
       );
 
-      setMessages(response?.messages || []);
+      if (response?.sentMessage) {
+        setMessages((prev) => [...prev, response.sentMessage]);
+      }
+      setMessageText("");
     } catch (err) {
-      console.error("Failed to load messages:", err);
+      console.error("FAILED TO SEND MESSAGE:", err);
+      alert(err instanceof Error ? err.message : "Failed to send message");
     } finally {
-      setMessagesLoading(false);
+      setSendingMessage(false);
     }
   };
 
-  loadMessages();
-}, [grievanceId]);
+  const handleOfficerDecision = async (action: "ACCEPT" | "OVERRIDE") => {
+    if (!grievanceId) return;
 
-const handleSendMessage = async () => {
-  console.log("SEND BUTTON CLICKED");
-  console.log("grievanceId:", grievanceId);
-  console.log("messageText:", messageText);
-
-  if (!messageText.trim() || !grievanceId) {
-    console.log("RETURNED: missing message or grievanceId");
-    return;
-  }
-
-  try {
-    setSendingMessage(true);
-
-    const token = localStorage.getItem("token");
-
-    console.log("Token exists:", !!token);
-    console.log("Sending request...");
-
-    if (!token) {
-      throw new Error("Authentication token not found.");
+    if (action === "OVERRIDE" && !overrideReason.trim()) {
+      setDecisionFeedback({
+        type: "error",
+        message: "Please provide a reason/explanation when overriding the decision.",
+      });
+      return;
     }
 
-    const response = await sendGrievanceMessage(
-      token,
-      grievanceId,
-      messageText.trim()
-    );
+    try {
+      setSubmittingDecision(true);
+      setDecisionFeedback(null);
 
-    console.log("BACKEND RESPONSE:", response);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication token not found.");
 
-    if (response?.sentMessage) {
-      setMessages((prev) => [
-        ...prev,
-        response.sentMessage,
-      ]);
+      const response = await submitOfficerDecision(token, grievanceId, {
+        action,
+        newPriority: action === "OVERRIDE" ? humanPriority : undefined,
+        reason: overrideReason.trim() ? overrideReason.trim() : undefined,
+      });
+
+      if (response?.grievance) {
+        setGrievance(response.grievance);
+        setHumanPriority(response.grievance.priority || humanPriority);
+      }
+
+      setDecisionFeedback({
+        type: "success",
+        message:
+          action === "OVERRIDE"
+            ? `Priority updated to ${humanPriority} and decision recorded.`
+            : "AI Recommendation accepted successfully.",
+      });
+    } catch (err: any) {
+      console.error("Decision submission error:", err);
+      setDecisionFeedback({
+        type: "error",
+        message: err.message || "Failed to submit decision.",
+      });
+    } finally {
+      setSubmittingDecision(false);
     }
+  };
 
-    setMessageText("");
-  } catch (err) {
-    console.error("FAILED TO SEND MESSAGE:", err);
-
-    alert(
-      err instanceof Error
-        ? err.message
-        : "Failed to send message"
-    );
-  } finally {
-    setSendingMessage(false);
-  }
-};
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -1689,15 +1208,18 @@ const handleSendMessage = async () => {
   }
 
   const priorityScore = grievance?.aiAnalysis?.priorityScore;
-  const department = typeof grievance.department === "object"
-    ? grievance.department?.name || grievance.department?.code
-    : grievance.department;
-  const officer = typeof grievance.assignedOfficer === "object"
-    ? grievance.assignedOfficer?.name
-    : grievance.assignedOfficer;
+  const department =
+    typeof grievance.department === "object"
+      ? grievance.department?.name || grievance.department?.code
+      : grievance.department;
+  const officer =
+    typeof grievance.assignedOfficer === "object"
+      ? grievance.assignedOfficer?.name
+      : grievance.assignedOfficer;
 
   const slaDue = grievance?.sla?.dueAt ? new Date(grievance.sla.dueAt) : null;
-  const slaBreached = grievance?.sla?.breached === true || (slaDue && slaDue.getTime() <= Date.now());
+  const slaBreached =
+    grievance?.sla?.breached === true || (slaDue && slaDue.getTime() <= Date.now());
   const slaRemaining = slaDue
     ? slaBreached
       ? "Breached"
@@ -1710,25 +1232,33 @@ const handleSendMessage = async () => {
         })()
     : "Not set";
 
-  const timelineSteps = Array.isArray(grievance.timeline) && grievance.timeline.length > 0
-    ? grievance.timeline.map((event: any) => ({
-        label: event.status || "Update",
-        desc: event.message || "Grievance updated",
-        time: event.timestamp ? new Date(event.timestamp).toLocaleString("en-IN") : "—",
-        done: ["RESOLVED", "CLOSED"].includes(event.status),
-      }))
-    : [{
-        label: grievance.status || "SUBMITTED",
-        desc: "Grievance submitted",
-        time: grievance.createdAt ? new Date(grievance.createdAt).toLocaleString("en-IN") : "—",
-        done: false,
-      }];
+  const timelineSteps =
+    Array.isArray(grievance.timeline) && grievance.timeline.length > 0
+      ? grievance.timeline.map((event: any) => ({
+          label: event.status || "Update",
+          desc: event.message || "Grievance updated",
+          time: event.timestamp ? new Date(event.timestamp).toLocaleString("en-IN") : "—",
+          done: ["RESOLVED", "CLOSED"].includes(event.status),
+        }))
+      : [
+          {
+            label: grievance.status || "SUBMITTED",
+            desc: "Grievance submitted",
+            time: grievance.createdAt ? new Date(grievance.createdAt).toLocaleString("en-IN") : "—",
+            done: false,
+          },
+        ];
 
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <button onClick={() => navigate("priority-queue")} className="mt-1 text-slate-400 hover:text-slate-700 text-sm">← Back</button>
+          <button
+            onClick={() => navigate("priority-queue")}
+            className="mt-1 text-slate-400 hover:text-slate-700 text-sm"
+          >
+            ← Back
+          </button>
           <div>
             <div className="flex items-center gap-3 flex-wrap mb-1">
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -1739,7 +1269,8 @@ const handleSendMessage = async () => {
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-xs text-slate-500">
-                {grievance.category || "General"} • {grievance.location?.city || "Location unavailable"} • Reported {grievance.createdAt ? new Date(grievance.createdAt).toLocaleString("en-IN") : "Unknown"}
+                {grievance.category || "General"} • {grievance.location?.city || "Location unavailable"} • Reported{" "}
+                {grievance.createdAt ? new Date(grievance.createdAt).toLocaleString("en-IN") : "Unknown"}
               </span>
               {typeof priorityScore === "number" && (
                 <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
@@ -1753,7 +1284,13 @@ const handleSendMessage = async () => {
 
       <div className="flex gap-0 bg-slate-100 rounded-lg p-1 w-fit">
         {(["overview", "ai", "communication", "resolution"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${
+              tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
             {t === "ai" ? "AI Intelligence" : t}
           </button>
         ))}
@@ -1775,17 +1312,41 @@ const handleSendMessage = async () => {
               subtitle={grievance.description || "No description available."}
             >
               <div className="grid grid-cols-2 gap-5 text-sm">
-                <div><p className="text-xs text-slate-400">Department</p><p className="font-semibold mt-1">{department || "Unassigned"}</p></div>
-                <div><p className="text-xs text-slate-400">Assigned Officer</p><p className="font-semibold mt-1">{officer || "Unassigned"}</p></div>
-                <div><p className="text-xs text-slate-400">Subcategory</p><p className="font-semibold mt-1">{grievance.subcategory || "Not specified"}</p></div>
-                <div><p className="text-xs text-slate-400">Citizen</p><p className="font-semibold mt-1">{typeof grievance.citizen === "object" ? grievance.citizen?.name || grievance.citizen?.email : grievance.citizen || "—"}</p></div>
+                <div>
+                  <p className="text-xs text-slate-400">Department</p>
+                  <p className="font-semibold mt-1">{department || "Unassigned"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Assigned Officer</p>
+                  <p className="font-semibold mt-1">{officer || "Unassigned"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Subcategory</p>
+                  <p className="font-semibold mt-1">{grievance.subcategory || "Not specified"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Citizen</p>
+                  <p className="font-semibold mt-1">
+                    {typeof grievance.citizen === "object"
+                      ? grievance.citizen?.name || grievance.citizen?.email
+                      : grievance.citizen || "—"}
+                  </p>
+                </div>
               </div>
             </SectionCard>
 
             <SectionCard title="Complaint Location">
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                <div><p className="text-xs text-slate-400">Address</p><p className="font-medium mt-1">{grievance.location?.address || "Not provided"}</p></div>
-                <div><p className="text-xs text-slate-400">City / State</p><p className="font-medium mt-1">{[grievance.location?.city, grievance.location?.state].filter(Boolean).join(", ") || "Not provided"}</p></div>
+                <div>
+                  <p className="text-xs text-slate-400">Address</p>
+                  <p className="font-medium mt-1">{grievance.location?.address || "Not provided"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">City / State</p>
+                  <p className="font-medium mt-1">
+                    {[grievance.location?.city, grievance.location?.state].filter(Boolean).join(", ") || "Not provided"}
+                  </p>
+                </div>
               </div>
               <MapSvg mode="markers" height={240} showLocationPicker={false} />
             </SectionCard>
@@ -1798,17 +1359,36 @@ const handleSendMessage = async () => {
           <div className="space-y-4">
             <SectionCard title="SLA Status">
               <div className="space-y-3 text-sm">
-                <div><p className="text-xs text-slate-400">Deadline</p><p className="font-semibold mt-1">{slaDue ? slaDue.toLocaleString("en-IN") : "No SLA deadline"}</p></div>
-                <div><p className="text-xs text-slate-400">Remaining</p><p className={`font-bold text-lg ${slaBreached ? "text-red-600" : "text-green-600"}`}>{slaRemaining}</p></div>
+                <div>
+                  <p className="text-xs text-slate-400">Deadline</p>
+                  <p className="font-semibold mt-1">
+                    {slaDue ? slaDue.toLocaleString("en-IN") : "No SLA deadline"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Remaining</p>
+                  <p className={`font-bold text-lg ${slaBreached ? "text-red-600" : "text-green-600"}`}>
+                    {slaRemaining}
+                  </p>
+                </div>
                 <SlaIndicator status={slaBreached ? "breach" : "ok"} remaining={slaRemaining} />
               </div>
             </SectionCard>
 
             <SectionCard title="Assignment">
               <div className="space-y-3 text-sm">
-                <div><p className="text-xs text-slate-400">Department</p><p className="font-semibold mt-1">{department || "Unassigned"}</p></div>
-                <div><p className="text-xs text-slate-400">Officer</p><p className="font-semibold mt-1">{officer || "Unassigned"}</p></div>
-                <div><p className="text-xs text-slate-400">Status</p><p className="font-semibold mt-1">{grievance.status || "SUBMITTED"}</p></div>
+                <div>
+                  <p className="text-xs text-slate-400">Department</p>
+                  <p className="font-semibold mt-1">{department || "Unassigned"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Officer</p>
+                  <p className="font-semibold mt-1">{officer || "Unassigned"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Status</p>
+                  <p className="font-semibold mt-1">{grievance.status || "SUBMITTED"}</p>
+                </div>
               </div>
             </SectionCard>
           </div>
@@ -1822,13 +1402,35 @@ const handleSendMessage = async () => {
               {grievance.aiAnalysis ? (
                 <div className="space-y-4 text-sm">
                   <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-xs text-slate-400">Category</p><p className="font-semibold mt-1">{grievance.aiAnalysis.category || "—"}</p></div>
-                    <div><p className="text-xs text-slate-400">Subcategory</p><p className="font-semibold mt-1">{grievance.aiAnalysis.subcategory || "—"}</p></div>
-                    <div><p className="text-xs text-slate-400">Department</p><p className="font-semibold mt-1">{grievance.aiAnalysis.department || "—"}</p></div>
-                    <div><p className="text-xs text-slate-400">Confidence</p><p className="font-semibold mt-1">{typeof grievance.aiAnalysis.confidence === "number" ? `${Math.round(grievance.aiAnalysis.confidence * 100)}%` : "—"}</p></div>
+                    <div>
+                      <p className="text-xs text-slate-400">Category</p>
+                      <p className="font-semibold mt-1">{grievance.aiAnalysis.category || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Subcategory</p>
+                      <p className="font-semibold mt-1">{grievance.aiAnalysis.subcategory || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Department</p>
+                      <p className="font-semibold mt-1">{grievance.aiAnalysis.department || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Confidence</p>
+                      <p className="font-semibold mt-1">
+                        {typeof grievance.aiAnalysis.confidence === "number"
+                          ? `${Math.round(grievance.aiAnalysis.confidence * 100)}%`
+                          : "—"}
+                      </p>
+                    </div>
                   </div>
-                  <div><p className="text-xs text-slate-400">Priority Reason</p><p className="mt-1">{grievance.aiAnalysis.priorityReason || "Not available"}</p></div>
-                  <div><p className="text-xs text-slate-400">Summary</p><p className="mt-1">{grievance.aiAnalysis.summary || "Not available"}</p></div>
+                  <div>
+                    <p className="text-xs text-slate-400">Priority Reason</p>
+                    <p className="mt-1">{grievance.aiAnalysis.priorityReason || "Not available"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Summary</p>
+                    <p className="mt-1">{grievance.aiAnalysis.summary || "Not available"}</p>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">AI analysis is not available for this grievance.</p>
@@ -1837,102 +1439,149 @@ const handleSendMessage = async () => {
 
             <SectionCard title="Officer Decision">
               <div className="space-y-3">
-                <select value={humanPriority} onChange={(e) => setHumanPriority(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
-                  <option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
-                </select>
-                <textarea value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} rows={3} placeholder="Explain your decision..." className="w-full border border-slate-200 rounded-lg p-3 text-sm resize-none" />
+                {decisionFeedback && (
+                  <div
+                    className={`p-3 rounded-lg text-xs font-medium ${
+                      decisionFeedback.type === "success"
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : "bg-red-50 text-red-700 border border-red-200"
+                    }`}
+                  >
+                    {decisionFeedback.message}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Select Priority
+                  </label>
+                  <select
+                    value={humanPriority}
+                    onChange={(e) => setHumanPriority(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Decision Justification / Reason
+                  </label>
+                  <textarea
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    rows={3}
+                    placeholder="Explain your decision..."
+                    className="w-full border border-slate-200 rounded-lg p-3 text-sm resize-none focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    disabled={submittingDecision}
+                    onClick={() => handleOfficerDecision("ACCEPT")}
+                    className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium transition disabled:opacity-50"
+                  >
+                    Accept AI Recommendation
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submittingDecision}
+                    onClick={() => handleOfficerDecision("OVERRIDE")}
+                    className="px-4 py-2 rounded-lg bg-[#0f2b4e] hover:bg-[#1a3f6d] text-white text-xs font-medium transition disabled:opacity-50"
+                  >
+                    {submittingDecision ? "Saving..." : "Override & Save"}
+                  </button>
+                </div>
               </div>
             </SectionCard>
           </div>
         </div>
       )}
 
-        {tab === "communication" && (
-  <div className="grid grid-cols-3 gap-5">
-    <div className="col-span-2">
-      <div className="bg-red-600 text-white p-4 text-xl font-bold">
-  THIS IS THE OFFICER FILE
-</div>
-      <SectionCard title="Communication">
-        <div className="space-y-4">
-          {messagesLoading ? (
-            <p className="text-sm text-slate-500">
-              Loading messages...
-            </p>
-          ) : messages.length === 0 ? (
-            <p className="text-sm text-slate-500">
-              No messages yet.
-            </p>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.map((msg: any, index: number) => (
-                <div
-                  key={msg._id || index}
-                  className="border border-slate-200 rounded-lg p-3"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-slate-700">
-                      {msg.sender?.name ||
-                        msg.senderRole ||
-                        "User"}
-                    </span>
-
-                    <span className="text-[11px] text-slate-400">
-                      {msg.timestamp
-                        ? new Date(
-                            msg.timestamp
-                          ).toLocaleString("en-IN")
-                        : ""}
-                    </span>
+      {tab === "communication" && (
+        <div className="grid grid-cols-3 gap-5">
+          <div className="col-span-2">
+            <SectionCard title="Communication">
+              <div className="space-y-4">
+                {messagesLoading ? (
+                  <p className="text-sm text-slate-500">Loading messages...</p>
+                ) : messages.length === 0 ? (
+                  <p className="text-sm text-slate-500">No messages yet.</p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {messages.map((msg: any, index: number) => (
+                      <div
+                        key={msg._id || index}
+                        className="border border-slate-200 rounded-lg p-3"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-semibold text-slate-700">
+                            {msg.sender?.name || msg.senderRole || "User"}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {msg.timestamp ? new Date(msg.timestamp).toLocaleString("en-IN") : ""}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600">{msg.message}</p>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  <p className="text-sm text-slate-600">
-                    {msg.message}
-                  </p>
+                <div className="flex gap-2 pt-2 border-t border-slate-100">
+                  <input
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                    placeholder="Type a message..."
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={sendingMessage || !messageText.trim()}
+                    onClick={handleSendMessage}
+                    className="bg-[#0f2b4e] text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 hover:bg-[#1a3f6d]"
+                  >
+                    {sendingMessage ? "Sending..." : "Send"}
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-2 border-t border-slate-100">
-            <input
-              value={messageText}
-              onChange={(e) =>
-                setMessageText(e.target.value)
-              }
-              placeholder="Type a message..."
-              className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
-            />
-
-                        <button
-  type="button"
-  onClick={() => alert("CLICK WORKS")}
-  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
->
-  TEST SEND
-</button>
-                      
+              </div>
+            </SectionCard>
           </div>
-        </div>
-      </SectionCard>
-    </div>
 
-    <SectionCard title="Internal Notes">
-      <p className="text-sm text-slate-500">
-        Internal notes are not implemented yet.
-      </p>
-    </SectionCard>
-  </div>
-)}
+          <SectionCard title="Internal Notes">
+            <p className="text-sm text-slate-500">Internal notes are not implemented yet.</p>
+          </SectionCard>
+        </div>
+      )}
 
       {tab === "resolution" && (
         <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2">
             <SectionCard title="Resolution">
               <div className="space-y-4 text-sm">
-                <div><p className="text-xs text-slate-400">Resolution message</p><p className="mt-1">{grievance.resolution?.message || "No resolution submitted yet."}</p></div>
-                <div><p className="text-xs text-slate-400">Resolved at</p><p className="mt-1">{grievance.resolution?.resolvedAt ? new Date(grievance.resolution.resolvedAt).toLocaleString("en-IN") : "Not resolved"}</p></div>
-                <div><p className="text-xs text-slate-400">Feedback</p><p className="mt-1">{grievance.feedback?.comment || "No citizen feedback yet."}</p></div>
+                <div>
+                  <p className="text-xs text-slate-400">Resolution message</p>
+                  <p className="mt-1">{grievance.resolution?.message || "No resolution submitted yet."}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Resolved at</p>
+                  <p className="mt-1">
+                    {grievance.resolution?.resolvedAt
+                      ? new Date(grievance.resolution.resolvedAt).toLocaleString("en-IN")
+                      : "Not resolved"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">Feedback</p>
+                  <p className="mt-1">{grievance.feedback?.comment || "No citizen feedback yet."}</p>
+                </div>
               </div>
             </SectionCard>
           </div>
@@ -1950,38 +1599,67 @@ export function GeoIntelligence() {
 
   return (
     <div className="p-6 space-y-4">
-      <PageHeader title="Geographic Intelligence" subtitle="Real-time spatial complaint analysis and hotspot detection" />
+      <PageHeader
+        title="Geographic Intelligence"
+        subtitle="Real-time spatial complaint analysis and hotspot detection"
+      />
 
-      <div className="grid grid-cols-4 gap-5" style={{ height: "calc(100vh - 200px)", minHeight: 500 }}>
-        {/* Map */}
+      <div
+        className="grid grid-cols-4 gap-5"
+        style={{ height: "calc(100vh - 200px)", minHeight: 500 }}
+      >
         <div className="col-span-3 flex flex-col gap-3">
-          {/* Map toolbar */}
           <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
             <div className="flex gap-1">
-              {(["markers", "heatmap", "clusters"] as const).map(m => (
-                <button key={m} onClick={() => setMapMode(m)} className={`px-3 py-1 text-xs rounded-lg font-medium capitalize transition-colors ${mapMode === m ? "bg-[#0f2b4e] text-white" : "text-slate-600 hover:bg-slate-100 dark:bg-slate-700"}`}>
+              {(["markers", "heatmap", "clusters"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMapMode(m)}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium capitalize transition-colors ${
+                    mapMode === m
+                      ? "bg-[#0f2b4e] text-white"
+                      : "text-slate-600 hover:bg-slate-100 dark:bg-slate-700"
+                  }`}
+                >
                   {m === "markers" ? "📍 Markers" : m === "heatmap" ? "🌡 Heatmap" : "◎ Clusters"}
                 </button>
               ))}
             </div>
             <div className="h-4 w-px bg-slate-200" />
-            <input type="text" placeholder="Search area or locality..." className="flex-1 text-sm text-slate-600 outline-none" />
-            <button className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900">Layers ∨</button>
+            <input
+              type="text"
+              placeholder="Search area or locality..."
+              className="flex-1 text-sm text-slate-600 outline-none"
+            />
+            <button className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900">
+              Layers ∨
+            </button>
           </div>
 
-          {/* Filters */}
           <div className="flex gap-2 flex-wrap">
-            {["All", "Critical", "High", "Water Supply", "Roads", "Sanitation", "Breached SLA"].map(f => (
-              <FilterChip key={f} label={f} active={activeFilter === f} onClick={() => setActiveFilter(f)} />
-            ))}
+            {["All", "Critical", "High", "Water Supply", "Roads", "Sanitation", "Breached SLA"].map(
+              (f) => (
+                <FilterChip
+                  key={f}
+                  label={f}
+                  active={activeFilter === f}
+                  onClick={() => setActiveFilter(f)}
+                />
+              )
+            )}
           </div>
 
           <div className="flex-1">
-            <MapSvg mode={mapMode} height={480} showControls={true} selectedZone={selectedZone} onZoneClick={z => setSelectedZone(z === selectedZone ? null : z)} />
+            <MapSvg
+              mode={mapMode}
+              height={480}
+              showControls={true}
+              selectedZone={selectedZone}
+              onZoneClick={(z) => setSelectedZone(z === selectedZone ? null : z)}
+            />
           </div>
         </div>
 
-        {/* Right panel */}
         <div className="space-y-3 overflow-y-auto">
           <SectionCard title="Zone Analytics">
             <div className="space-y-2">
@@ -1991,13 +1669,33 @@ export function GeoIntelligence() {
                 { zone: "Zone 1", count: 142, level: "Moderate", color: "bg-yellow-100 text-yellow-700" },
                 { zone: "Zone 2", count: 89, level: "Low", color: "bg-green-100 text-green-700" },
                 { zone: "Zone 5", count: 67, level: "Moderate", color: "bg-yellow-100 text-yellow-700" },
-              ].map(z => (
-                <div key={z.zone} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer hover:opacity-80 ${selectedZone === z.zone ? "ring-2 ring-blue-500" : ""}`} style={{ background: z.level === "Critical" ? "#fef2f2" : z.level === "High" ? "#fffbeb" : "#f0fdf4" }} onClick={() => setSelectedZone(z.zone === selectedZone ? null : z.zone)}>
+              ].map((z) => (
+                <div
+                  key={z.zone}
+                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer hover:opacity-80 ${
+                    selectedZone === z.zone ? "ring-2 ring-blue-500" : ""
+                  }`}
+                  style={{
+                    background:
+                      z.level === "Critical"
+                        ? "#fef2f2"
+                        : z.level === "High"
+                        ? "#fffbeb"
+                        : "#f0fdf4",
+                  }}
+                  onClick={() => setSelectedZone(z.zone === selectedZone ? null : z.zone)}
+                >
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{z.zone}</p>
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${z.color}`}>{z.level}</span>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {z.zone}
+                    </p>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${z.color}`}>
+                      {z.level}
+                    </span>
                   </div>
-                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{z.count}</span>
+                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300">
+                    {z.count}
+                  </span>
                 </div>
               ))}
             </div>
@@ -2006,20 +1704,36 @@ export function GeoIntelligence() {
           {selectedZone === "Zone 4" && (
             <SectionCard title="Zone 4 Details" className="border-blue-300">
               <div className="space-y-2 text-xs mb-3">
-                {[["Total Grievances", "438"], ["Critical", "42"], ["High", "97"], ["Water Supply", "173"], ["Roads", "122"], ["Sanitation", "81"], ["Trend", "↑ 37% this week"], ["Population", "18,420"]].map(([k, v]) => (
+                {[
+                  ["Total Grievances", "438"],
+                  ["Critical", "42"],
+                  ["High", "97"],
+                  ["Water Supply", "173"],
+                  ["Roads", "122"],
+                  ["Sanitation", "81"],
+                  ["Trend", "↑ 37% this week"],
+                  ["Population", "18,420"],
+                ].map(([k, v]) => (
                   <div key={k} className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-500">{k}</span>
+                    <span className="text-slate-500">{k}</span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200">{v}</span>
                   </div>
                 ))}
               </div>
-              <PrimaryBtn className="w-full justify-center text-xs">View Zone Grievances</PrimaryBtn>
+              <PrimaryBtn className="w-full justify-center text-xs">
+                View Zone Grievances
+              </PrimaryBtn>
             </SectionCard>
           )}
 
           <AiInsightCard
             title="AI Spatial Insight"
-            text={<>Zone 4 complaint density <strong>increased 37%</strong> this week. Water supply failures concentrated near Sector 7 market. Consider preemptive inspection.</>}
+            text={
+              <>
+                Zone 4 complaint density <strong>increased 37%</strong> this week. Water supply
+                failures concentrated near Sector 7 market. Consider preemptive inspection.
+              </>
+            }
             disclaimer="AI-generated insight • Not official action"
           />
         </div>
@@ -2029,10 +1743,15 @@ export function GeoIntelligence() {
 }
 
 // ─── SLA Monitoring ───────────────────────────────────────────────────────────
-export function SLAMonitoring() {
+export function SLAMonitoring({
+  navigate,
+}: {
+  navigate?: (screen: string) => void;
+}) {
   const [grievances, setGrievances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"ALL" | "WITHIN" | "NEAR" | "BREACHED">("ALL");
 
   useEffect(() => {
     const loadGrievances = async () => {
@@ -2041,13 +1760,9 @@ export function SLAMonitoring() {
         setError("");
 
         const token = localStorage.getItem("token");
-
-        if (!token) {
-          throw new Error("Authentication token not found");
-        }
+        if (!token) throw new Error("Authentication token not found");
 
         const data = await getMyGrievances(token);
-
         const items = Array.isArray(data)
           ? data
           : Array.isArray(data?.grievances)
@@ -2070,164 +1785,101 @@ export function SLAMonitoring() {
 
   const getDepartmentName = (grievance: any) => {
     if (!grievance.department) return "Unassigned";
-
-    if (typeof grievance.department === "string") {
-      return grievance.department;
-    }
-
-    return (
-      grievance.department.name ||
-      grievance.department.code ||
-      "Unassigned"
-    );
+    if (typeof grievance.department === "string") return grievance.department;
+    return grievance.department.name || grievance.department.code || "Unassigned";
   };
 
   const getOfficerName = (grievance: any) => {
     if (!grievance.assignedOfficer) return "Unassigned";
-
-    if (typeof grievance.assignedOfficer === "string") {
-      return grievance.assignedOfficer;
-    }
-
+    if (typeof grievance.assignedOfficer === "string") return grievance.assignedOfficer;
     return grievance.assignedOfficer.name || "Unassigned";
   };
 
   const getSlaInfo = (grievance: any) => {
+    if (grievance.status === "RESOLVED") {
+      const resolvedAt = new Date(grievance.resolution?.resolvedAt || grievance.updatedAt).getTime();
+      const dueAt = grievance?.sla?.dueAt ? new Date(grievance.sla.dueAt).getTime() : null;
+      if (dueAt && resolvedAt > dueAt) {
+        return { status: "breach" as const, label: "Resolved (Late)", remaining: "Breached" };
+      }
+      return { status: "ok" as const, label: "Resolved in SLA", remaining: "Completed" };
+    }
+
     const dueAt = grievance?.sla?.dueAt;
-
-    if (grievance?.sla?.breached) {
-      return {
-        status: "breach" as const,
-        label: "Breached",
-        remaining: "Breached",
-      };
-    }
-
     if (!dueAt) {
-      return {
-        status: "ok" as const,
-        label: "No SLA",
-        remaining: "Not set",
-      };
+      return { status: "ok" as const, label: "No SLA", remaining: "Not set" };
     }
 
-    const now = Date.now();
-    const deadline = new Date(dueAt).getTime();
-    const difference = deadline - now;
-
-    if (difference <= 0) {
-      return {
-        status: "breach" as const,
-        label: "Breached",
-        remaining: "Breached",
-      };
+    const difference = new Date(dueAt).getTime() - Date.now();
+    if (grievance?.sla?.breached || difference <= 0) {
+      return { status: "breach" as const, label: "Breached", remaining: "Breached" };
     }
 
     const totalHours = difference / (1000 * 60 * 60);
-
     const days = Math.floor(totalHours / 24);
     const hours = Math.floor(totalHours % 24);
-    const minutes = Math.floor(
-      (difference / (1000 * 60)) % 60
-    );
+    const minutes = Math.floor((difference / (1000 * 60)) % 60);
 
-    let remaining = "";
-
-    if (days > 0) {
-      remaining = `${days}d ${hours}h`;
-    } else {
-      remaining = `${hours}h ${minutes}m`;
-    }
+    const remaining = days > 0 ? `${days}d ${hours}h left` : `${hours}h ${minutes}m left`;
 
     if (totalHours <= 24) {
-      return {
-        status: "warn" as const,
-        label: "Nearing",
-        remaining,
-      };
+      return { status: "warn" as const, label: "Nearing Deadline", remaining };
     }
 
-    return {
-      status: "ok" as const,
-      label: "Within SLA",
-      remaining,
-    };
+    return { status: "ok" as const, label: "Within SLA", remaining };
   };
 
   const formatDeadline = (date: string | undefined) => {
     if (!date) return "Not set";
-
     const parsed = new Date(date);
-
-    if (Number.isNaN(parsed.getTime())) {
-      return "Not set";
-    }
-
-    return parsed.toLocaleString([], {
+    if (Number.isNaN(parsed.getTime())) return "Not set";
+    return parsed.toLocaleString("en-IN", {
       month: "short",
       day: "numeric",
-      hour: "numeric",
+      hour: "2-digit",
       minute: "2-digit",
     });
   };
 
   const resolvedGrievances = grievances.filter(
-    (g) =>
-      g.status === "RESOLVED" &&
-      g.resolution?.resolvedAt
+    (g) => g.status === "RESOLVED" && g.resolution?.resolvedAt
   );
 
   const averageResolutionTime = (() => {
-    if (resolvedGrievances.length === 0) {
-      return "—";
-    }
+    if (resolvedGrievances.length === 0) return "—";
 
-    const totalHours = resolvedGrievances.reduce(
-      (total, grievance) => {
-        const start = new Date(grievance.createdAt).getTime();
-        const end = new Date(
-          grievance.resolution.resolvedAt
-        ).getTime();
+    const totalHours = resolvedGrievances.reduce((total, grievance) => {
+      const start = new Date(grievance.createdAt).getTime();
+      const end = new Date(grievance.resolution.resolvedAt).getTime();
+      if (Number.isNaN(start) || Number.isNaN(end)) return total;
+      return total + (end - start) / (1000 * 60 * 60);
+    }, 0);
 
-        if (Number.isNaN(start) || Number.isNaN(end)) {
-          return total;
-        }
-
-        return total + (end - start) / (1000 * 60 * 60);
-      },
-      0
-    );
-
-    const averageHours =
-      totalHours / resolvedGrievances.length;
-
+    const averageHours = totalHours / resolvedGrievances.length;
     if (averageHours >= 24) {
       return `${(averageHours / 24).toFixed(1)} days`;
     }
-
     return `${averageHours.toFixed(1)} hrs`;
   })();
 
   const slaStats = grievances.reduce(
     (stats, grievance) => {
       const sla = getSlaInfo(grievance);
-
-      if (sla.status === "breach") {
-        stats.breached++;
-      } else if (sla.status === "warn") {
-        stats.nearDeadline++;
-      } else {
-        stats.withinSla++;
-      }
-
+      if (sla.status === "breach") stats.breached++;
+      else if (sla.status === "warn") stats.nearDeadline++;
+      else stats.withinSla++;
       return stats;
     },
-    {
-      withinSla: 0,
-      nearDeadline: 0,
-      breached: 0,
-    }
+    { withinSla: 0, nearDeadline: 0, breached: 0 }
   );
+
+  const filteredGrievances = grievances.filter((g) => {
+    const sla = getSlaInfo(g);
+    if (filter === "WITHIN") return sla.status === "ok";
+    if (filter === "NEAR") return sla.status === "warn";
+    if (filter === "BREACHED") return sla.status === "breach";
+    return true;
+  });
 
   return (
     <div className="p-6 space-y-5">
@@ -2236,152 +1888,111 @@ export function SLAMonitoring() {
         subtitle="Track service level agreement compliance across all assignments"
       />
 
-      <div className="flex gap-3 overflow-x-auto">
-        <KpiCard
-          label="Within SLA"
-          value={String(slaStats.withinSla)}
-          trend="Live"
-          trendUp={true}
-        />
-
-        <KpiCard
-          label="Near Deadline"
-          value={String(slaStats.nearDeadline)}
-          trend="Live"
-          trendUp={false}
-        />
-
-        <KpiCard
-          label="Breached"
-          value={String(slaStats.breached)}
-          trend="Live"
-          trendUp={false}
-        />
-
-        <KpiCard
-          label="Avg Resolution Time"
-          value={averageResolutionTime}
-          trend="Live"
-          trendUp={true}
-        />
+      <div className="grid grid-cols-4 gap-4">
+        <div onClick={() => setFilter("WITHIN")} className="cursor-pointer">
+          <KpiCard label="Within SLA" value={String(slaStats.withinSla)} trend="Live" trendUp={true} />
+        </div>
+        <div onClick={() => setFilter("NEAR")} className="cursor-pointer">
+          <KpiCard label="Near Deadline (<24h)" value={String(slaStats.nearDeadline)} trend="Live" trendUp={false} />
+        </div>
+        <div onClick={() => setFilter("BREACHED")} className="cursor-pointer">
+          <KpiCard label="Breached" value={String(slaStats.breached)} trend="Live" trendUp={false} />
+        </div>
+        <KpiCard label="Avg Resolution Time" value={averageResolutionTime} trend="Live" trendUp={true} />
       </div>
 
-      <SectionCard title="SLA Status Board">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-slate-500">Filter Board:</span>
+        {(["ALL", "WITHIN", "NEAR", "BREACHED"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${
+              filter === f
+                ? "bg-[#0f2b4e] text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {f === "ALL" ? "All Assignments" : f === "WITHIN" ? "Within SLA" : f === "NEAR" ? "Nearing Deadline" : "Breached"}
+          </button>
+        ))}
+      </div>
+
+      <SectionCard title="SLA Status Board" subtitle={`${filteredGrievances.length} grievance(s) listed`}>
         {loading ? (
-          <div className="py-10 text-center text-sm text-slate-500">
-            Loading SLA information...
-          </div>
+          <div className="py-10 text-center text-sm text-slate-500">Loading SLA information...</div>
         ) : error ? (
-          <div className="py-10 text-center text-sm text-red-600">
-            {error}
-          </div>
-        ) : grievances.length === 0 ? (
+          <div className="py-10 text-center text-sm text-red-600">{error}</div>
+        ) : filteredGrievances.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-500">
-            No grievances available for SLA monitoring.
+            No grievances match the selected filter.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-slate-400 border-b border-slate-100 dark:border-slate-700">
-                  {[
-                    "Complaint ID",
-                    "Priority",
-                    "Department",
-                    "Officer",
-                    "SLA Deadline",
-                    "Remaining",
-                    "Status",
-                    "Action",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left font-medium pb-3 pr-3"
-                    >
-                      {h}
-                    </th>
-                  ))}
+                  {["Complaint ID", "Priority", "Department", "Officer", "SLA Deadline", "Remaining", "Status", "Action"].map(
+                    (h) => (
+                      <th key={h} className="text-left font-medium pb-3 pr-3">
+                        {h}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                {grievances.map((grievance) => {
+                {filteredGrievances.map((grievance) => {
+                  const targetId = grievance._id || grievance.grievanceId;
                   const sla = getSlaInfo(grievance);
 
                   return (
                     <tr
-                      key={grievance._id || grievance.grievanceId}
-                      className={`hover:bg-slate-50 ${
+                      key={targetId}
+                      className={`hover:bg-slate-50 cursor-pointer transition ${
                         sla.status === "breach"
                           ? "bg-red-50/40"
                           : sla.status === "warn"
                           ? "bg-amber-50/30"
                           : ""
                       }`}
+                      onClick={() => navigate && navigate(`grievance-detail:${targetId}`)}
                     >
                       <td className="py-3 pr-3 font-mono text-xs text-blue-600 font-semibold">
-                        {grievance.grievanceId ||
-                          grievance._id ||
-                          "—"}
+                        {grievance.grievanceId || grievance._id || "—"}
                       </td>
-
                       <td className="py-3 pr-3">
-                        <PriorityBadge
-                          priority={
-                            grievance.priority || "MEDIUM"
-                          }
-                        />
+                        <PriorityBadge priority={grievance.priority || "MEDIUM"} />
                       </td>
-
                       <td className="py-3 pr-3 text-slate-700 text-xs">
                         {getDepartmentName(grievance)}
                       </td>
-
                       <td className="py-3 pr-3 text-slate-600 text-xs">
                         {getOfficerName(grievance)}
                       </td>
-
-                      <td className="py-3 pr-3 text-slate-600 text-xs">
-                        {formatDeadline(
-                          grievance?.sla?.dueAt
-                        )}
+                      <td className="py-3 pr-3 text-slate-600 text-xs font-medium">
+                        {formatDeadline(grievance?.sla?.dueAt)}
                       </td>
-
                       <td className="py-3 pr-3">
-                        <SlaIndicator
-                          status={sla.status}
-                          remaining={sla.remaining}
-                        />
+                        <SlaIndicator status={sla.status} remaining={sla.remaining} />
                       </td>
-
                       <td className="py-3 pr-3">
                         <span
-                          className={`text-xs font-medium ${
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                             sla.status === "breach"
-                              ? "text-red-600"
+                              ? "bg-red-100 text-red-700"
                               : sla.status === "warn"
-                              ? "text-amber-600"
-                              : "text-green-600"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {sla.status === "breach"
-                            ? "🔴 Breached"
-                            : sla.status === "warn"
-                            ? "🟠 Nearing"
-                            : "🟢 Within SLA"}
+                          {sla.label}
                         </span>
                       </td>
-
-                      <td className="py-3">
+                      <td className="py-3" onClick={(e) => e.stopPropagation()}>
                         <button
-                          className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50"
-                          onClick={() => {
-                            console.log(
-                              "View grievance:",
-                              grievance.grievanceId ||
-                                grievance._id
-                            );
-                          }}
+                          className="text-xs text-blue-600 border border-blue-200 rounded px-2.5 py-1 hover:bg-blue-50 font-medium"
+                          onClick={() => navigate && navigate(`grievance-detail:${targetId}`)}
                         >
                           View
                         </button>
@@ -2399,7 +2010,11 @@ export function SLAMonitoring() {
 }
 
 // ─── Escalations ─────────────────────────────────────────────────────────────
-export function Escalations() {
+export function Escalations({
+  navigate,
+}: {
+  navigate?: (screen: string) => void;
+}) {
   const [grievances, setGrievances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -2411,13 +2026,9 @@ export function Escalations() {
         setError("");
 
         const token = localStorage.getItem("token");
-
-        if (!token) {
-          throw new Error("Authentication token not found");
-        }
+        if (!token) throw new Error("Authentication token not found");
 
         const data = await getMyGrievances(token);
-
         const items = Array.isArray(data)
           ? data
           : Array.isArray(data?.grievances)
@@ -2438,97 +2049,50 @@ export function Escalations() {
     loadEscalations();
   }, []);
 
-  const escalatedGrievances = grievances.filter(
-    (grievance) => grievance?.sla?.escalated === true
-  );
-
-  const getPriority = (grievance: any) =>
-    grievance.priority || "MEDIUM";
+  const escalatedGrievances = grievances.filter((g) => g?.sla?.escalated === true);
+  const getPriority = (grievance: any) => grievance.priority || "MEDIUM";
 
   const getEscalationReason = (grievance: any) => {
-    if (grievance?.sla?.breached) {
-      return "SLA Exceeded";
-    }
-
-    if (grievance.priority === "CRITICAL") {
-      return "Critical grievance";
-    }
-
+    if (grievance?.sla?.breached) return "SLA Exceeded";
+    if (grievance.priority === "CRITICAL") return "Critical grievance";
     return "Escalated grievance";
   };
 
   const getOfficerName = (grievance: any) => {
-    if (!grievance.assignedOfficer) {
-      return "System";
-    }
-
-    if (typeof grievance.assignedOfficer === "string") {
-      return grievance.assignedOfficer;
-    }
-
+    if (!grievance.assignedOfficer) return "System";
+    if (typeof grievance.assignedOfficer === "string") return grievance.assignedOfficer;
     return grievance.assignedOfficer.name || "Officer";
   };
 
   const getEscalatedTo = (grievance: any) => {
-    const timeline = Array.isArray(grievance.timeline)
-      ? grievance.timeline
-      : [];
-
+    const timeline = Array.isArray(grievance.timeline) ? grievance.timeline : [];
     const escalationEvent = [...timeline]
       .reverse()
       .find((event: any) =>
-        String(event.message || "")
-          .toLowerCase()
-          .includes("escalat")
+        String(event.message || "").toLowerCase().includes("escalat")
       );
-
-    if (escalationEvent?.message) {
-      return escalationEvent.message;
-    }
-
-    return "Higher Authority";
+    return escalationEvent?.message || "Higher Authority";
   };
 
   const getEscalationTime = (grievance: any) => {
-    const timeline = Array.isArray(grievance.timeline)
-      ? grievance.timeline
-      : [];
-
+    const timeline = Array.isArray(grievance.timeline) ? grievance.timeline : [];
     const escalationEvent = [...timeline]
       .reverse()
       .find((event: any) =>
-        String(event.message || "")
-          .toLowerCase()
-          .includes("escalat")
+        String(event.message || "").toLowerCase().includes("escalat")
       );
 
     const timestamp =
-      escalationEvent?.timestamp ||
-      grievance.updatedAt ||
-      grievance.createdAt;
-
+      escalationEvent?.timestamp || grievance.updatedAt || grievance.createdAt;
     if (!timestamp) return "";
 
     const date = new Date(timestamp);
-
     if (Number.isNaN(date.getTime())) return "";
 
-    const hoursAgo = Math.floor(
-      (Date.now() - date.getTime()) /
-        (1000 * 60 * 60)
-    );
-
-    if (hoursAgo < 1) {
-      return "Just now";
-    }
-
-    if (hoursAgo < 24) {
-      return `${hoursAgo}h ago`;
-    }
-
-    const daysAgo = Math.floor(hoursAgo / 24);
-
-    return `${daysAgo}d ago`;
+    const hoursAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60));
+    if (hoursAgo < 1) return "Just now";
+    if (hoursAgo < 24) return `${hoursAgo}h ago`;
+    return `${Math.floor(hoursAgo / 24)}d ago`;
   };
 
   return (
@@ -2536,182 +2100,69 @@ export function Escalations() {
       <PageHeader
         title="Escalation Management"
         subtitle="Track and manage escalated grievances through authority hierarchy"
-      >
-        <PrimaryBtn>
-          + New Escalation
-        </PrimaryBtn>
-      </PageHeader>
-
-      {/* Hierarchy */}
-      <SectionCard title="Escalation Hierarchy">
-        <div className="flex items-center gap-3 text-sm">
-          {[
-            "Officer",
-            "Department Head",
-            "District Officer",
-            "Higher Authority",
-          ].map((lvl, i) => (
-            <div
-              key={lvl}
-              className="flex items-center gap-3"
-            >
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs ${
-                    i === 0
-                      ? "bg-blue-600 text-white"
-                      : i === 1
-                      ? "bg-amber-100 text-amber-700"
-                      : i === 2
-                      ? "bg-red-100 text-red-700"
-                      : "bg-purple-100 text-purple-700"
-                  }`}
-                >
-                  {lvl
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")}
-                </div>
-
-                <span className="text-[10px] text-slate-600 mt-1 text-center w-20 leading-tight">
-                  {lvl}
-                </span>
-              </div>
-
-              {i < 3 && (
-                <span className="text-slate-300 text-lg mb-4">
-                  →
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+      />
 
       <SectionCard title="Active Escalations">
         {loading ? (
-          <div className="py-10 text-center text-sm text-slate-500">
-            Loading escalations...
-          </div>
+          <div className="py-10 text-center text-sm text-slate-500">Loading escalations...</div>
         ) : error ? (
-          <div className="py-10 text-center text-sm text-red-600">
-            {error}
-          </div>
+          <div className="py-10 text-center text-sm text-red-600">{error}</div>
         ) : escalatedGrievances.length === 0 ? (
-          <div className="py-10 text-center text-sm text-slate-500">
-            No active escalations.
-          </div>
+          <div className="py-10 text-center text-sm text-slate-500">No active escalations.</div>
         ) : (
           <div className="space-y-3">
-            {escalatedGrievances.map((grievance) => (
-              <div
-                key={
-                  grievance._id ||
-                  grievance.grievanceId
-                }
-                className="border border-slate-200 rounded-xl p-4 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-blue-600 font-semibold">
-                        {grievance.grievanceId ||
-                          grievance._id}
-                      </span>
+            {escalatedGrievances.map((grievance) => {
+              const targetId = grievance._id || grievance.grievanceId;
 
-                      <PriorityBadge
-                        priority={getPriority(grievance)}
-                      />
-
-                      <StatusBadge
-                        status={
-                          grievance.status ||
-                          "ESCALATED"
-                        }
-                      />
+              return (
+                <div
+                  key={targetId}
+                  className="border border-slate-200 rounded-xl p-4 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-blue-600 font-semibold">
+                          {grievance.grievanceId || grievance._id}
+                        </span>
+                        <PriorityBadge priority={getPriority(grievance)} />
+                        <StatusBadge status={grievance.status || "ESCALATED"} />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-800 mt-0.5">
+                        {grievance.title || "Untitled grievance"}
+                      </p>
                     </div>
-
-                    <p className="text-sm font-semibold text-slate-800 mt-0.5">
-                      {grievance.title ||
-                        "Untitled grievance"}
-                    </p>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {getEscalationTime(grievance)}
+                    </span>
                   </div>
 
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
-                    {getEscalationTime(grievance)}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 text-xs text-slate-600 mb-3">
-                  <div>
-                    <p className="text-slate-400 dark:text-slate-500">
-                      From
-                    </p>
-                    <p className="font-medium">
-                      {getOfficerName(grievance)}
-                    </p>
+                  <div className="grid grid-cols-3 gap-3 text-xs text-slate-600 mb-3">
+                    <div>
+                      <p className="text-slate-400">From</p>
+                      <p className="font-medium">{getOfficerName(grievance)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Escalated To</p>
+                      <p className="font-medium">{getEscalatedTo(grievance)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400">Reason</p>
+                      <p className="font-medium text-amber-700">{getEscalationReason(grievance)}</p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="text-slate-400 dark:text-slate-500">
-                      Escalated To
-                    </p>
-                    <p className="font-medium">
-                      {getEscalatedTo(grievance)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-slate-400 dark:text-slate-500">
-                      Reason
-                    </p>
-                    <p className="font-medium text-amber-700">
-                      {getEscalationReason(grievance)}
-                    </p>
+                  <div className="flex gap-2">
+                    <button
+                      className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-50"
+                      onClick={() => navigate && navigate(`grievance-detail:${targetId}`)}
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <button
-                    className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-50"
-                    onClick={() => {
-                      console.log(
-                        "View escalated grievance:",
-                        grievance.grievanceId ||
-                          grievance._id
-                      );
-                    }}
-                  >
-                    View Details
-                  </button>
-
-                  <button
-                    className="text-xs text-slate-600 border border-slate-200 rounded-lg px-3 py-1 hover:bg-slate-50 dark:bg-slate-900"
-                    onClick={() => {
-                      console.log(
-                        "View escalation history:",
-                        grievance.timeline
-                      );
-                    }}
-                  >
-                    View History
-                  </button>
-
-                  <button
-                    className="text-xs text-red-600 border border-red-200 rounded-lg px-3 py-1 hover:bg-red-50"
-                    onClick={() => {
-                      console.log(
-                        "Escalate further:",
-                        grievance.grievanceId ||
-                          grievance._id
-                      );
-                    }}
-                  >
-                    Escalate Further
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>

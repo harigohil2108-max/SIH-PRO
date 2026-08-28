@@ -16,6 +16,8 @@ import {
   checkDuplicateGrievances,
   getGrievanceMessages,
   sendGrievanceMessage,
+  routeDepartmentByAdmin,
+  submitOfficerDecision
 } from "../controllers/grievanceController.js";
 
 const router = express.Router();
@@ -41,6 +43,7 @@ router.post(
   authenticateUser,
   analyzeGrievancePreview
 );
+
 router.post(
   "/check-duplicates",
   authenticateUser,
@@ -48,15 +51,14 @@ router.post(
 );
 
 // ============================================================
-// GRIEVANCE COMMUNICATION
-//
+// GRIEVANCE DETAILS
+// ============================================================
 
 router.get(
   "/:id",
   authenticateUser,
   getGrievanceById
 );
-
 
 // ============================================================
 // GRIEVANCE COMMUNICATION
@@ -80,50 +82,43 @@ router.post(
 // GRIEVANCE WORKFLOW ROUTES
 // ============================================================
 
-// Officer / Admin / Department Head can update status
+// Officer / Admin can update status
 router.patch(
   "/:id/status",
   authenticateUser,
-  authorizeRoles(
-    "OFFICER",
-    "ADMIN",
-    
-  ),
+  authorizeRoles("OFFICER", "ADMIN"),
   updateGrievanceStatus
 );
 
-// Admin / Department Head can assign grievances
+// Admin can assign grievances
 router.post(
   "/:id/assign",
   authenticateUser,
-  authorizeRoles(
-    "ADMIN",
-    
-  ),
+  authorizeRoles("ADMIN"),
   assignGrievance
 );
 
-// Officer / Admin / Department Head can escalate
+// Admin manual department routing
+router.post(
+  "/:id/route-department",
+  authenticateUser,
+  authorizeRoles("ADMIN"),
+  routeDepartmentByAdmin
+);
+
+// Officer / Admin can escalate
 router.post(
   "/:id/escalate",
   authenticateUser,
-  authorizeRoles(
-    "OFFICER",
-    "ADMIN",
-  ),
+  authorizeRoles("OFFICER", "ADMIN"),
   escalateGrievance
 );
 
-// Citizen can reopen their own grievance
-// Staff can also reopen
+// Citizen / Officer / Admin can reopen
 router.post(
   "/:id/reopen",
   authenticateUser,
-  authorizeRoles(
-    "OFFICER",
-    "ADMIN",
-    "CITIZEN"
-  ),
+  authorizeRoles("OFFICER", "ADMIN", "CITIZEN"),
   reopenGrievance
 );
 
@@ -135,5 +130,11 @@ router.post(
   submitFeedback
 );
 
+router.post(
+  "/:id/decision",
+  authenticateUser,
+  authorizeRoles("OFFICER", "ADMIN"),
+  submitOfficerDecision
+);
 
 export default router;

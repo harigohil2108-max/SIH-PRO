@@ -485,3 +485,47 @@ export const sendGrievanceMessage = async (
   return data;
 };
 
+export const routeGrievanceDepartment = async (
+  token: string,
+  grievanceId: string,
+  departmentId: string,
+  priority?: string
+) => {
+  const response = await fetch(`${API_URL}/grievances/${grievanceId}/route-department`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ departmentId, priority }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to route grievance to department");
+  }
+
+  return data;
+};
+
+export const submitOfficerDecision = async (
+  token: string,
+  grievanceId: string,
+  payload: { action: "ACCEPT" | "OVERRIDE"; newPriority?: string; reason?: string }
+) => {
+  const response = await fetch(`${API_URL}/grievances/${grievanceId}/decision`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to submit decision");
+  }
+  return data;
+};

@@ -216,3 +216,26 @@ export const reopenGrievance = async (
 
   return data;
 };
+
+
+export async function routeGrievanceDepartment(
+  token: string,
+  grievanceId: string,
+  departmentId: string,
+  priority?: string
+) {
+  const res = await fetch(`/api/grievances/${grievanceId}/route-department`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ departmentId, priority }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to route grievance to department");
+  }
+  return data;
+}
