@@ -228,3 +228,26 @@ export const changePassword = async (req, res) => {
     });
   }
 };
+
+/*
+  Admin - Get all users
+*/
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("-password")
+      .populate("department", "name code");
+
+    return res.json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.error("Get all users error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while loading users",
+    });
+  }
+};

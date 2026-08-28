@@ -8,6 +8,7 @@ import {
   updateProfile,
   updateLocation,
   changePassword,
+  getAllUsers,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -62,6 +63,16 @@ router.get(
         "Welcome Admin. You have access to this resource.",
     });
   }
+);
+
+/*
+  Admin - Get all users
+*/
+router.get(
+  "/admin/all",
+  authenticateUser,
+  authorizeRoles("ADMIN"),
+  getAllUsers
 );
 
 export default router;

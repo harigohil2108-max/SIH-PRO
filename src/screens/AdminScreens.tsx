@@ -16,8 +16,12 @@ import {
 import {
   getDepartments,
 } from "../services/departmentService";
+import {
+  getAllUsers,
+} from "./services/userService";
 
 import { exportGrievancesToCSV, exportGrievancesToPDF } from "../utils/exportUtils";
+
 
 const trendData = [
   { month: "Jan", submitted: 85, resolved: 62 }, { month: "Feb", submitted: 98, resolved: 74 },
@@ -3358,6 +3362,496 @@ export function Reports() {
           </SectionCard>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Admin People Management ───────────────────────────────────────────────────
+
+export function AdminPeople({
+  kind,
+}: {
+  kind: "OFFICER" | "CITIZEN";
+}) {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] =
+    useState<any | null>(null);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getAllUsers();
+
+      setUsers(
+        data.filter(
+          (user: any) =>
+            user.role === kind
+        )
+      );
+    } catch (err) {
+      console.error(
+        "Failed to load users:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load users"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, [kind]);
+
+  const filteredUsers = users.filter(
+    (user) => {
+      const query =
+        search.trim().toLowerCase();
+
+      if (!query) return true;
+
+      return [
+        user.name,
+        user.email,
+        user.phone,
+        user.officialId,
+        user.designation,
+        user.department?.name,
+        user.department?.code,
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(query)
+      );
+    }
+  );
+
+  const activeUsers = users.filter(
+    (user) => user.isActive !== false
+  ).length;
+
+  const inactiveUsers =
+    users.length - activeUsers;
+
+  const title =
+    kind === "OFFICER"
+      ? "Officer Management"
+      : "Citizen Management";
+
+  const subtitle =
+    kind === "OFFICER"
+      ? "View and manage registered government officers"
+      : "View and manage registered citizens";
+
+  return (
+    <div className="p-6 space-y-5">
+
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+      >
+        <SecondaryBtn onClick={loadUsers}>
+          Refresh
+        </SecondaryBtn>
+      </PageHeader>
+
+      {/* Statistics */}
+
+      <div className="flex gap-3">
+
+        <KpiCard
+          label={`Total ${
+            kind === "OFFICER"
+              ? "Officers"
+              : "Citizens"
+          }`}
+          value={String(users.length)}
+          trend="Live"
+          trendUp={true}
+        />
+
+        <KpiCard
+          label="Active"
+          value={String(activeUsers)}
+          trend="Accounts"
+          trendUp={true}
+        />
+
+        <KpiCard
+          label="Inactive"
+          value={String(inactiveUsers)}
+          trend="Accounts"
+          trendUp={inactiveUsers === 0}
+        />
+
+      </div>
+
+      {/* Search */}
+
+      <SectionCard>
+
+        <div className="flex items-center gap-3 mb-4">
+
+          <input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder={
+              kind === "OFFICER"
+                ? "Search officer by name, email, ID..."
+                : "Search citizen by name, email, phone..."
+            }
+            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
+          />
+
+          <span className="text-xs text-slate-500">
+            {filteredUsers.length} result
+            {filteredUsers.length !== 1
+              ? "s"
+              : ""}
+          </span>
+
+        </div>
+
+        {/* Loading */}
+
+        {loading ? (
+
+          <div className="py-12 text-center text-sm text-slate-500">
+            Loading{" "}
+            {kind === "OFFICER"
+              ? "officers"
+              : "citizens"}
+            ...
+          </div>
+
+        ) : error ? (
+
+          <div className="py-12 text-center text-sm text-red-600">
+            {error}
+          </div>
+
+        ) : filteredUsers.length === 0 ? (
+
+          <div className="py-12 text-center text-sm text-slate-500">
+            No{" "}
+            {kind === "OFFICER"
+              ? "officers"
+              : "citizens"}{" "}
+            found.
+          </div>
+
+        ) : (
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full text-sm">
+
+              <thead>
+
+                <tr className="text-xs text-slate-400 border-b border-slate-100">
+
+                  <th className="text-left pb-3 pr-4">
+                    Name
+                  </th>
+
+                  <th className="text-left pb-3 pr-4">
+                    Email
+                  </th>
+
+                  {kind === "OFFICER" && (
+                    <>
+                      <th className="text-left pb-3 pr-4">
+                        Department
+                      </th>
+
+                      <th className="text-left pb-3 pr-4">
+                        Designation
+                      </th>
+
+                      <th className="text-left pb-3 pr-4">
+                        Official ID
+                      </th>
+                    </>
+                  )}
+
+                  {kind === "CITIZEN" && (
+                    <th className="text-left pb-3 pr-4">
+                      Phone
+                    </th>
+                  )}
+
+                  <th className="text-left pb-3 pr-4">
+                    Status
+                  </th>
+
+                  <th className="text-left pb-3">
+                    Action
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody className="divide-y divide-slate-50">
+
+                {filteredUsers.map(
+                  (user) => (
+
+                    <tr
+                      key={user._id}
+                      className="hover:bg-slate-50"
+                    >
+
+                      <td className="py-3 pr-4">
+
+                        <div className="flex items-center gap-3">
+
+                          <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
+
+                            {String(
+                              user.name || "U"
+                            )
+                              .split(" ")
+                              .map(
+                                (word) =>
+                                  word[0]
+                              )
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+
+                          </div>
+
+                          <span className="font-medium text-slate-800">
+                            {user.name}
+                          </span>
+
+                        </div>
+
+                      </td>
+
+                      <td className="py-3 pr-4 text-slate-500">
+                        {user.email}
+                      </td>
+
+                      {kind === "OFFICER" && (
+                        <>
+                          <td className="py-3 pr-4 text-slate-600">
+                            {user.department?.name ||
+                              user.department?.code ||
+                              "Unassigned"}
+                          </td>
+
+                          <td className="py-3 pr-4 text-slate-600">
+                            {user.designation ||
+                              "—"}
+                          </td>
+
+                          <td className="py-3 pr-4 font-mono text-xs text-slate-500">
+                            {user.officialId ||
+                              "—"}
+                          </td>
+                        </>
+                      )}
+
+                      {kind === "CITIZEN" && (
+                        <td className="py-3 pr-4 text-slate-500">
+                          {user.phone ||
+                            "—"}
+                        </td>
+                      )}
+
+                      <td className="py-3 pr-4">
+
+                        <span
+                          className={`px-2 py-1 rounded-full text-[11px] font-semibold ${
+                            user.isActive !==
+                            false
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {user.isActive !==
+                          false
+                            ? "Active"
+                            : "Inactive"}
+                        </span>
+
+                      </td>
+
+                      <td className="py-3">
+
+                        <button
+                          onClick={() =>
+                            setSelectedUser(
+                              user
+                            )
+                          }
+                          className="text-xs text-blue-600 border border-blue-200 rounded px-3 py-1 hover:bg-blue-50"
+                        >
+                          View
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  )
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </SectionCard>
+
+      {/* User details modal */}
+
+      {selectedUser && (
+
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() =>
+            setSelectedUser(null)
+          }
+        >
+
+          <div
+            className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-lg p-6 shadow-xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <div className="flex justify-between items-start mb-5">
+
+              <div>
+
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  {selectedUser.name}
+                </h2>
+
+                <p className="text-sm text-slate-500">
+                  {selectedUser.email}
+                </p>
+
+              </div>
+
+              <button
+                onClick={() =>
+                  setSelectedUser(null)
+                }
+                className="text-slate-400 hover:text-slate-700 text-xl"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="space-y-3">
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                <div className="text-xs text-slate-400">
+                  Role
+                </div>
+                <div className="font-medium text-slate-700 dark:text-slate-200">
+                  {selectedUser.role}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                <div className="text-xs text-slate-400">
+                  Phone
+                </div>
+                <div className="font-medium text-slate-700 dark:text-slate-200">
+                  {selectedUser.phone ||
+                    "Not provided"}
+                </div>
+              </div>
+
+              {kind === "OFFICER" && (
+                <>
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                    <div className="text-xs text-slate-400">
+                      Department
+                    </div>
+                    <div className="font-medium text-slate-700 dark:text-slate-200">
+                      {selectedUser.department?.name ||
+                        "Unassigned"}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                    <div className="text-xs text-slate-400">
+                      Designation
+                    </div>
+                    <div className="font-medium text-slate-700 dark:text-slate-200">
+                      {selectedUser.designation ||
+                        "Not provided"}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                    <div className="text-xs text-slate-400">
+                      Official ID
+                    </div>
+                    <div className="font-medium text-slate-700 dark:text-slate-200">
+                      {selectedUser.officialId ||
+                        "Not provided"}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+                <div className="text-xs text-slate-400">
+                  Account Status
+                </div>
+                <div className="font-medium text-slate-700 dark:text-slate-200">
+                  {selectedUser.isActive !==
+                  false
+                    ? "Active"
+                    : "Inactive"}
+                </div>
+              </div>
+
+            </div>
+
+            <div className="flex justify-end mt-5">
+
+              <button
+                onClick={() =>
+                  setSelectedUser(null)
+                }
+                className="px-4 py-2 bg-[#0f2b4e] text-white rounded-lg text-sm"
+              >
+                Close
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
   );
 }

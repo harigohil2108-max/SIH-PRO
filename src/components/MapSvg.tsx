@@ -5,6 +5,14 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 type MapMode = "markers" | "heatmap" | "clusters";
 
+interface FixedLocation {
+  id: string;
+  name: string;
+  department: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface Props {
   mode?: MapMode;
   height?: number;
@@ -24,6 +32,14 @@ interface Props {
 
   selectedZone?: string | null;
   onZoneClick?: (zone: string) => void;
+
+  fixedLocations?: {
+  id: string;
+  name: string;
+  department: string;
+  latitude: number;
+  longitude: number;
+}[];
 }
 
 const CENTER: [number, number] = [81.6296, 21.2514];
@@ -43,6 +59,58 @@ const complaints = [
   [81.621, 21.241, "Critical", "NV-1033", "Water Supply"],
   [81.648, 21.237, "Medium", "NV-1028", "Electricity"],
 ] as const;
+
+const FIXED_LOCATIONS: FixedLocation[] = [
+  {
+    id: "roads-office",
+    name: "Roads Department Office",
+    department: "Roads",
+    latitude: 21.2518,
+    longitude: 81.6290,
+  },
+  {
+    id: "water-office",
+    name: "Water Supply Department Office",
+    department: "Water Supply",
+    latitude: 21.2552,
+    longitude: 81.6350,
+  },
+  {
+    id: "electricity-office",
+    name: "Electricity Department Office",
+    department: "Electricity",
+    latitude: 21.2475,
+    longitude: 81.6225,
+  },
+  {
+    id: "sanitation-office",
+    name: "Sanitation Department Office",
+    department: "Sanitation",
+    latitude: 21.2580,
+    longitude: 81.6420,
+  },
+  {
+    id: "waste-office",
+    name: "Waste Management Office",
+    department: "Waste Mgmt",
+    latitude: 21.2435,
+    longitude: 81.6370,
+  },
+  {
+    id: "lighting-office",
+    name: "Street Lighting Office",
+    department: "Street Lighting",
+    latitude: 21.2600,
+    longitude: 81.6250,
+  },
+  {
+    id: "transport-office",
+    name: "Transport Department Office",
+    department: "Transport",
+    latitude: 21.2450,
+    longitude: 81.6480,
+  },
+];
 
 /*
  * Keep this untyped.
@@ -107,6 +175,7 @@ export default function MapSvg({
   allowMapClick = true,
   location,
   onLocationChange,
+  fixedLocations = [],
 }: Props) {
   const containerRef =
     useRef<HTMLDivElement | null>(null);
@@ -185,6 +254,43 @@ export default function MapSvg({
      */
 
     map.on("load", () => {
+
+            // =======================================================
+      // FIXED DEPARTMENT OFFICE MARKERS
+      // =======================================================
+
+      fixedLocations.forEach((office) => {
+        const el = document.createElement("div");
+
+        el.style.width = "18px";
+        el.style.height = "18px";
+        el.style.borderRadius = "50%";
+        el.style.backgroundColor = "#0f2b4e";
+        el.style.border = "3px solid white";
+        el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+        el.style.cursor = "pointer";
+
+        const popup = new maplibregl.Popup({
+          offset: 14,
+        }).setHTML(`
+          <div style="font-family: Arial, sans-serif;">
+            <strong>${office.name}</strong>
+            <div style="margin-top:4px; color:#64748b;">
+              ${office.department}
+            </div>
+          </div>
+        `);
+
+        new maplibregl.Marker({
+          element: el,
+        })
+          .setLngLat([
+            office.longitude,
+            office.latitude,
+          ])
+          .setPopup(popup)
+          .addTo(map);
+      });
       /*
        * Add complaint source
        */

@@ -33,6 +33,7 @@ import {
   AdminDashboard,
   AllGrievances,
   Departments,
+  AdminPeople,
   // AdminGeoIntelligence,
   AIAnalytics,
   AuditLogs,
@@ -505,6 +506,13 @@ function renderScreen(
       return <AllGrievances navigate={navigate} />;
     case "departments":
       return <Departments />;
+      case "officers":
+  return <AdminPeople kind="OFFICER" />;
+  case "citizens":
+  return <AdminPeople kind="CITIZEN" />;
+
+case "citizens":
+  return <AdminPeople kind="CITIZEN" />;
     case "geo-intelligence":
       // return <AdminGeoIntelligence />;
     case "ai-analytics":
