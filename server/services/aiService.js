@@ -10,7 +10,7 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const AI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const AI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const isTemporaryAIError = (error) => {
   const status = error?.status || error?.cause?.status;
@@ -53,7 +53,10 @@ ${location?.state || ""}
 
 ATTACHED EVIDENCE:
 ${Array.isArray(evidence) && evidence.length
-  ? evidence.map((item) => typeof item === "string" ? item : `${item.type || "FILE"}: ${item.url || "unnamed"}`).join(", ")
+  ? evidence.map((item) => {
+    const value = typeof item === "string" ? item : item.url;
+    return `${typeof item === "object" ? item.type || "FILE" : "FILE"}: ${typeof value === "string" && value.startsWith("data:") ? "attached file" : value || "unnamed"}`;
+  }).join(", ")
   : "None provided"}
 
 Determine:
@@ -79,9 +82,28 @@ Return ONLY valid JSON in this exact structure:
 }
 `;
 
+    const evidenceParts = Array.isArray(evidence)
+      ? evidence.flatMap((item) => {
+        const dataUrl = typeof item === "object" ? item.url : item;
+        const match = typeof dataUrl === "string"
+          ? dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+          : null;
+
+        return match
+          ? [{ inlineData: { mimeType: match[1], data: match[2] } }]
+          : [];
+      })
+      : [];
+
     const response = await ai.models.generateContent({
   model: AI_MODEL,
-  contents: prompt,
+  contents: [{
+    role: "user",
+    parts: [
+      { text: prompt },
+      ...evidenceParts,
+    ],
+  }],
   config: {
     responseMimeType: "application/json",
   },
@@ -97,4 +119,52 @@ return JSON.parse(content);
 
   throw error;
 }
+};
+
+const chatFallback = "Sorry, I'm temporarily unable to respond. Please try again or check the Help & Feedback FAQs.";
+
+export const chatWithAssistant = async ({ message, conversation = [], faqs = [] }) => {
+  if (!process.env.GEMINI_API_KEY) {
+    const error = new Error("Gemini API is not configured");
+    error.status = 503;
+    throw error;
+  }
+
+  const faqContext = faqs
+    .slice(0, 30)
+    .map((faq) => `Question: ${faq.question}\nAnswer: ${faq.answer}`)
+    .join("\n\n");
+
+  const contents = [
+    ...conversation.slice(-12).map((item) => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.content }],
+    })),
+    { role: "user", parts: [{ text: message }] },
+  ];
+
+  const response = await ai.models.generateContent({
+    model: AI_MODEL,
+    contents,
+    config: {
+      systemInstruction: `You are Nivara AI Assistant, a helpful assistant for Nivara, an AI-powered public grievance management platform.
+
+Help users with submitting grievances, tracking grievances, understanding grievance statuses and IDs, updating grievances, navigating Nivara, and using the platform.
+
+Use the FAQ information below as your primary source for Nivara-specific answers. You may explain it naturally and use conversation context to understand follow-up questions. Do not invent government policies, laws, deadlines, department procedures, or official information. For questions outside this information, say that you do not have enough information and direct the user to Nivara support or the appropriate official channel.
+
+FAQ INFORMATION:
+${faqContext}`,
+    },
+  });
+
+  const reply = response.text?.trim();
+
+  if (!reply) {
+    const error = new Error("Gemini returned an empty response");
+    error.status = 502;
+    throw error;
+  }
+
+  return reply;
 };

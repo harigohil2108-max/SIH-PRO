@@ -293,6 +293,7 @@ export const createGrievance = async (req, res) => {
           category: grievance.category,
           subcategory: grievance.subcategory,
           location: grievance.location,
+          evidence: grievance.evidence,
         });
 
       // ======================================================

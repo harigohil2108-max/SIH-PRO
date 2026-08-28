@@ -8,6 +8,7 @@ import userRoutes from "./routes/userRoutes.js";
 import grievanceRoutes from "./routes/grievanceRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import { analyzeGrievance } from "./services/aiService.js";
 
 import connectDB from "./config/db.js";
@@ -24,7 +25,7 @@ const app = express();
 
 app.use(cors());
 app.use(helmet());
-app.use(express.json());
+app.use(express.json({ limit: "100mb" }));
 
 // ============================================================
 // API ROUTES
@@ -35,6 +36,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/grievances", grievanceRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/chat", chatRoutes);
 
 // ============================================================
 // HEALTH CHECK

@@ -1,9 +1,20 @@
+import Settings from "./screens/settings";
 import { useState, useEffect } from "react";
 import type { Role } from "./components/Shared";
 import AuthScreens from "./screens/AuthScreens";
 import { getCurrentUser } from "./screens/services/authService";
 import { getUnreadNotificationCount } from "./screens/services/notificationService";
 import Profile from "./screens/Profile";
+import HelpSupport from "./screens/HelpSupport";
+import {
+  LanguageContext,
+  type Language,
+  type TranslationKey,
+  toLanguage,
+  useTranslation,
+} from "./i18n";
+
+type Theme = "system" | "light" | "dark";
 
 // Citizen screens
 import {
@@ -266,6 +277,39 @@ const SIDEBARS: Record<
   ],
 };
 
+const navigationTranslationKeys: Record<string, TranslationKey> = {
+  Dashboard: "dashboard",
+  "My Grievances": "myGrievances",
+  "Submit Grievance": "submitGrievance",
+  Notifications: "notifications",
+  "Help & Support": "helpSupport",
+  Profile: "profile",
+  Settings: "settings",
+  "Priority Queue": "priorityQueue",
+  "My Assignments": "myAssignments",
+  "All Grievances": "allGrievances",
+  "SLA Monitoring": "slaMonitoring",
+  Escalations: "escalations",
+  "Geographic Intel.": "geographicIntel",
+  Analytics: "analytics",
+  Departments: "departments",
+  Officers: "officers",
+  Citizens: "citizens",
+  "Complaint Clusters": "complaintClusters",
+  "AI Insights": "aiInsights",
+  "SLA Management": "slaManagement",
+  Reports: "reports",
+  "Audit Logs": "auditLogs",
+};
+
+const sectionTranslationKeys: Record<string, TranslationKey> = {
+  OVERVIEW: "overview",
+  SUPPORT: "support",
+  OPERATIONS: "operations",
+  ACCOUNT: "account",
+  MANAGEMENT: "management",
+};
+
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 function Sidebar({
@@ -280,6 +324,7 @@ function Sidebar({
   navigate: (s: string) => void;
 }) {
   const sections = SIDEBARS[role];
+  const t = useTranslation();
 
   return (
     <aside
@@ -311,7 +356,7 @@ function Sidebar({
         {sections.map((sec) => (
           <div key={sec.section}>
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 tracking-widest px-2 mb-1 whitespace-nowrap">
-              {sec.section}
+              {t(sectionTranslationKeys[sec.section])}
             </p>
 
             {sec.items.map((item) => {
@@ -332,7 +377,7 @@ function Sidebar({
                   </span>
 
                   <span className="flex-1 truncate">
-                    {item.label}
+                    {t(navigationTranslationKeys[item.label])}
                   </span>
 
                   {item.badge && (
@@ -377,8 +422,6 @@ function Topbar({
   user,
   onToggle,
   activeScreen,
-  isDark,
-  onToggleDark,
   onLogout,
   unreadNotificationCount,
   onOpenNotifications,
@@ -387,12 +430,11 @@ function Topbar({
   user: AuthUser;
   onToggle: () => void;
   activeScreen: string;
-  isDark: boolean;
-  onToggleDark: () => void;
   onLogout: () => void;
   unreadNotificationCount: number;
   onOpenNotifications: () => void;
 }) {
+  const t = useTranslation();
   const roleNames: Record<Role, string> = {
     citizen: "Citizen",
     officer: "Grievance Officer",
@@ -400,15 +442,15 @@ function Topbar({
   };
 
   const roleBreadcrumbs: Record<Role, string> = {
-    citizen: "Citizen View",
-    officer: "Officer View",
-    admin: "Admin View",
+    citizen: t("citizenView"),
+    officer: t("officerView"),
+    admin: t("adminView"),
   };
 
   const roleSearch: Record<Role, string> = {
-    citizen: "Search grievances, tracking IDs...",
-    officer: "Search grievances, departments, IDs...",
-    admin: "Search departments, audit logs, IDs...",
+    citizen: t("searchCitizen"),
+    officer: t("searchOfficer"),
+    admin: t("searchAdmin"),
   };
 
   const screenLabel = activeScreen
@@ -447,7 +489,7 @@ function Topbar({
 
       {/* Breadcrumb */}
       <div className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
-        Dashboard{" "}
+        {t("dashboard")} {" "}
         <span className="text-slate-300 dark:text-slate-600 mx-1">
           /
         </span>
@@ -498,74 +540,11 @@ function Topbar({
 
       {/* Right side */}
       <div className="flex items-center gap-2 ml-auto">
-        {/* Dark mode */}
-        <button
-          onClick={onToggleDark}
-          title={
-            isDark
-              ? "Switch to Light Mode"
-              : "Switch to Dark Mode"
-          }
-          className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-        >
-          {isDark ? (
-            <svg
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line
-                x1="4.22"
-                y1="4.22"
-                x2="5.64"
-                y2="5.64"
-              />
-              <line
-                x1="18.36"
-                y1="18.36"
-                x2="19.78"
-                y2="19.78"
-              />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line
-                x1="4.22"
-                y1="19.78"
-                x2="5.64"
-                y2="18.36"
-              />
-              <line
-                x1="18.36"
-                y1="5.64"
-                x2="19.78"
-                y2="4.22"
-              />
-            </svg>
-          ) : (
-            <svg
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          )}
-        </button>
-
         {/* Notifications */}
         <button
           type="button"
           onClick={onOpenNotifications}
-          title="Notifications"
+          title={t("notifications")}
           className="relative text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <svg
@@ -635,7 +614,7 @@ function Topbar({
               onClick={onLogout}
               className="w-full text-left px-3 py-2 rounded-md text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
             >
-              Sign out
+              {t("signOut")}
             </button>
           </div>
         </div>
@@ -671,7 +650,12 @@ function PlaceholderScreen({
 function renderScreen(
   role: Role,
   screen: string,
-  navigate: (s: string) => void
+  navigate: (s: string) => void,
+  theme: Theme,
+  onThemeChange: (theme: Theme) => void,
+  user: AuthUser,
+  language: Language,
+  onLanguageChange: (language: Language) => void
 ) {
   const [currentScreen, grievanceId] = screen.split(":");
 
@@ -697,8 +681,23 @@ function renderScreen(
       case "notifications":
         return <CitizenNotifications />;
 
+      case "help":
+        return <HelpSupport />;
+
       case "profile":
         return <Profile />;
+      
+      case "settings":
+  return (
+    <Settings
+      theme={theme}
+      onThemeChange={onThemeChange}
+      userName={user.name}
+      userPhone={user.phone}
+      language={language}
+      onLanguageChange={onLanguageChange}
+    />
+  );
 
       default:
         return (
@@ -744,7 +743,18 @@ function renderScreen(
 
       case "profile":
         return <Profile />;
-
+      
+      case "settings":
+  return (
+    <Settings
+      theme={theme}
+      onThemeChange={onThemeChange}
+      userName={user.name}
+      userPhone={user.phone}
+      language={language}
+      onLanguageChange={onLanguageChange}
+    />
+  );
       default:
         return (
           <PlaceholderScreen
@@ -790,7 +800,18 @@ function renderScreen(
 
     case "profile":
       return <Profile />;
-
+    
+    case "settings":
+  return (
+    <Settings
+      theme={theme}
+      onThemeChange={onThemeChange}
+      userName={user.name}
+      userPhone={user.phone}
+      language={language}
+      onLanguageChange={onLanguageChange}
+    />
+  );
     default:
       return (
         <PlaceholderScreen
@@ -815,7 +836,25 @@ export default function App() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("nivara-settings") || "{}");
+      return ["system", "light", "dark"].includes(saved.theme)
+        ? saved.theme
+        : "system";
+    } catch {
+      return "system";
+    }
+  });
   const [isDark, setIsDark] = useState(false);
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("nivara-settings") || "{}");
+      return toLanguage(saved.language);
+    } catch {
+      return "en";
+    }
+  });
 
   const [unreadNotificationCount, setUnreadNotificationCount] =
     useState(0);
@@ -848,7 +887,22 @@ export default function App() {
       });
   }, []);
 
-  // Apply/remove dark mode
+  // Keep the interface in sync with the browser theme preference.
+  useEffect(() => {
+    const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyColorScheme = () => {
+      setIsDark(theme === "dark" || (theme === "system" && colorScheme.matches));
+    };
+
+    applyColorScheme();
+    if (theme === "system") {
+      colorScheme.addEventListener("change", applyColorScheme);
+    }
+
+    return () => colorScheme.removeEventListener("change", applyColorScheme);
+  }, [theme]);
+
   useEffect(() => {
     const html = document.documentElement;
 
@@ -904,6 +958,24 @@ export default function App() {
     setScreen(s);
   };
 
+  const handleThemeChange = (nextTheme: Theme) => {
+    setTheme(nextTheme);
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("nivara-settings") || "{}");
+      localStorage.setItem(
+        "nivara-settings",
+        JSON.stringify({ ...saved, theme: nextTheme })
+      );
+    } catch {
+      localStorage.setItem("nivara-settings", JSON.stringify({ theme: nextTheme }));
+    }
+  };
+
+  const handleLanguageChange = (nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+  };
+
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -938,7 +1010,8 @@ export default function App() {
 
   // Authenticated application
   return (
-    <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+    <LanguageContext.Provider value={language}>
+      <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           role={role}
@@ -955,10 +1028,6 @@ export default function App() {
               setSidebarOpen((open) => !open)
             }
             activeScreen={screen}
-            isDark={isDark}
-            onToggleDark={() =>
-              setIsDark((dark) => !dark)
-            }
             onLogout={handleLogout}
             unreadNotificationCount={unreadNotificationCount}
             onOpenNotifications={() =>
@@ -970,11 +1039,17 @@ export default function App() {
             {renderScreen(
               role,
               screen,
-              navigate
+              navigate,
+              theme,
+              handleThemeChange,
+              user,
+              language,
+              handleLanguageChange
             )}
           </main>
         </div>
       </div>
-    </div>
+      </div>
+    </LanguageContext.Provider>
   );
 }
