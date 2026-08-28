@@ -23,7 +23,7 @@ import {
   OfficerMyAssignments,
   PriorityQueue,
   OfficerGrievanceDetail,
-  GeoIntelligence,
+  // GeoIntelligence,
   SLAMonitoring,
   Escalations,
 } from "./screens/OfficerScreens";
@@ -33,8 +33,7 @@ import {
   AdminDashboard,
   AllGrievances,
   Departments,
-  AdminGeoIntelligence,
-  ComplaintClusters,
+  // AdminGeoIntelligence,
   AIAnalytics,
   AuditLogs,
   Reports,
@@ -92,8 +91,8 @@ const SIDEBARS: Record<
       items: [
         { icon: "◎", label: "SLA Monitoring", screen: "sla-monitoring" },
         { icon: "↗", label: "Escalations", screen: "escalations" },
-        { icon: "🗺", label: "Geographic Intel.", screen: "geo-intelligence" },
-        { icon: "▦", label: "Analytics", screen: "analytics" },
+        // { icon: "🗺", label: "Geographic Intel.", screen: "geo-intelligence" },
+        
       ],
     },
     {
@@ -111,7 +110,7 @@ const SIDEBARS: Record<
       items: [
         { icon: "⊞", label: "Dashboard", screen: "dashboard" },
         { icon: "☰", label: "All Grievances", screen: "all-grievances" },
-        { icon: "▦", label: "Analytics", screen: "analytics" },
+        
       ],
     },
     {
@@ -120,9 +119,7 @@ const SIDEBARS: Record<
         { icon: "◎", label: "Departments", screen: "departments" },
         { icon: "◯", label: "Officers", screen: "officers" },
         { icon: "◯", label: "Citizens", screen: "citizens" },
-        { icon: "🗺", label: "Geographic Intel.", screen: "geo-intelligence" },
-        { icon: "◎", label: "Complaint Clusters", screen: "complaint-clusters" },
-        { icon: "✦", label: "AI Insights", screen: "ai-analytics" },
+        // { icon: "🗺", label: "Geographic Intel.", screen: "geo-intelligence" },
         { icon: "◎", label: "SLA Management", screen: "sla-management" },
         { icon: "↗", label: "Escalations", screen: "escalations" },
         { icon: "▦", label: "Reports", screen: "reports" },
@@ -483,8 +480,8 @@ function renderScreen(
         return <AllGrievances navigate={navigate} />;
       case "grievance-detail":
         return <OfficerGrievanceDetail navigate={navigate} grievanceId={grievanceId} />;
-      case "geo-intelligence":
-        return <GeoIntelligence />;
+      // case "geo-intelligence":
+      //   return <GeoIntelligence />;
       case "sla-monitoring":
         return <SLAMonitoring navigate={navigate} />;
       case "escalations":
@@ -509,9 +506,7 @@ function renderScreen(
     case "departments":
       return <Departments />;
     case "geo-intelligence":
-      return <AdminGeoIntelligence />;
-    case "complaint-clusters":
-      return <ComplaintClusters navigate={navigate} />;
+      // return <AdminGeoIntelligence />;
     case "ai-analytics":
       return <AIAnalytics />;
     case "audit-logs":

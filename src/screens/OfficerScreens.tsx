@@ -1591,156 +1591,156 @@ export function OfficerGrievanceDetail({
   );
 }
 
-// ─── Geographic Intelligence ──────────────────────────────────────────────────
-export function GeoIntelligence() {
-  const [mapMode, setMapMode] = useState<"markers" | "heatmap" | "clusters">("markers");
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+// // ─── Geographic Intelligence ──────────────────────────────────────────────────
+// export function GeoIntelligence() {
+//   const [mapMode, setMapMode] = useState<"markers" | "heatmap" | "clusters">("markers");
+//   const [activeFilter, setActiveFilter] = useState("All");
+//   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
-  return (
-    <div className="p-6 space-y-4">
-      <PageHeader
-        title="Geographic Intelligence"
-        subtitle="Real-time spatial complaint analysis and hotspot detection"
-      />
+//   return (
+//     <div className="p-6 space-y-4">
+//       <PageHeader
+//         title="Geographic Intelligence"
+//         subtitle="Real-time spatial complaint analysis and hotspot detection"
+//       />
 
-      <div
-        className="grid grid-cols-4 gap-5"
-        style={{ height: "calc(100vh - 200px)", minHeight: 500 }}
-      >
-        <div className="col-span-3 flex flex-col gap-3">
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
-            <div className="flex gap-1">
-              {(["markers", "heatmap", "clusters"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMapMode(m)}
-                  className={`px-3 py-1 text-xs rounded-lg font-medium capitalize transition-colors ${
-                    mapMode === m
-                      ? "bg-[#0f2b4e] text-white"
-                      : "text-slate-600 hover:bg-slate-100 dark:bg-slate-700"
-                  }`}
-                >
-                  {m === "markers" ? "📍 Markers" : m === "heatmap" ? "🌡 Heatmap" : "◎ Clusters"}
-                </button>
-              ))}
-            </div>
-            <div className="h-4 w-px bg-slate-200" />
-            <input
-              type="text"
-              placeholder="Search area or locality..."
-              className="flex-1 text-sm text-slate-600 outline-none"
-            />
-            <button className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900">
-              Layers ∨
-            </button>
-          </div>
+//       <div
+//         className="grid grid-cols-4 gap-5"
+//         style={{ height: "calc(100vh - 200px)", minHeight: 500 }}
+//       >
+//         <div className="col-span-3 flex flex-col gap-3">
+//           <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
+//             <div className="flex gap-1">
+//               {(["markers", "heatmap", "clusters"] as const).map((m) => (
+//                 <button
+//                   key={m}
+//                   onClick={() => setMapMode(m)}
+//                   className={`px-3 py-1 text-xs rounded-lg font-medium capitalize transition-colors ${
+//                     mapMode === m
+//                       ? "bg-[#0f2b4e] text-white"
+//                       : "text-slate-600 hover:bg-slate-100 dark:bg-slate-700"
+//                   }`}
+//                 >
+//                   {m === "markers" ? "📍 Markers" : m === "heatmap" ? "🌡 Heatmap" : "◎ Clusters"}
+//                 </button>
+//               ))}
+//             </div>
+//             <div className="h-4 w-px bg-slate-200" />
+//             <input
+//               type="text"
+//               placeholder="Search area or locality..."
+//               className="flex-1 text-sm text-slate-600 outline-none"
+//             />
+//             <button className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900">
+//               Layers ∨
+//             </button>
+//           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            {["All", "Critical", "High", "Water Supply", "Roads", "Sanitation", "Breached SLA"].map(
-              (f) => (
-                <FilterChip
-                  key={f}
-                  label={f}
-                  active={activeFilter === f}
-                  onClick={() => setActiveFilter(f)}
-                />
-              )
-            )}
-          </div>
+//           <div className="flex gap-2 flex-wrap">
+//             {["All", "Critical", "High", "Water Supply", "Roads", "Sanitation", "Breached SLA"].map(
+//               (f) => (
+//                 <FilterChip
+//                   key={f}
+//                   label={f}
+//                   active={activeFilter === f}
+//                   onClick={() => setActiveFilter(f)}
+//                 />
+//               )
+//             )}
+//           </div>
 
-          <div className="flex-1">
-            <MapSvg
-              mode={mapMode}
-              height={480}
-              showControls={true}
-              selectedZone={selectedZone}
-              onZoneClick={(z) => setSelectedZone(z === selectedZone ? null : z)}
-            />
-          </div>
-        </div>
+//           <div className="flex-1">
+//             <MapSvg
+//               mode={mapMode}
+//               height={480}
+//               showControls={true}
+//               selectedZone={selectedZone}
+//               onZoneClick={(z) => setSelectedZone(z === selectedZone ? null : z)}
+//             />
+//           </div>
+//         </div>
 
-        <div className="space-y-3 overflow-y-auto">
-          <SectionCard title="Zone Analytics">
-            <div className="space-y-2">
-              {[
-                { zone: "Zone 4", count: 438, level: "Critical", color: "bg-red-100 text-red-700" },
-                { zone: "Zone 3", count: 201, level: "High", color: "bg-amber-100 text-amber-700" },
-                { zone: "Zone 1", count: 142, level: "Moderate", color: "bg-yellow-100 text-yellow-700" },
-                { zone: "Zone 2", count: 89, level: "Low", color: "bg-green-100 text-green-700" },
-                { zone: "Zone 5", count: 67, level: "Moderate", color: "bg-yellow-100 text-yellow-700" },
-              ].map((z) => (
-                <div
-                  key={z.zone}
-                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer hover:opacity-80 ${
-                    selectedZone === z.zone ? "ring-2 ring-blue-500" : ""
-                  }`}
-                  style={{
-                    background:
-                      z.level === "Critical"
-                        ? "#fef2f2"
-                        : z.level === "High"
-                        ? "#fffbeb"
-                        : "#f0fdf4",
-                  }}
-                  onClick={() => setSelectedZone(z.zone === selectedZone ? null : z.zone)}
-                >
-                  <div>
-                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                      {z.zone}
-                    </p>
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${z.color}`}>
-                      {z.level}
-                    </span>
-                  </div>
-                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300">
-                    {z.count}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
+//         <div className="space-y-3 overflow-y-auto">
+//           <SectionCard title="Zone Analytics">
+//             <div className="space-y-2">
+//               {[
+//                 { zone: "Zone 4", count: 438, level: "Critical", color: "bg-red-100 text-red-700" },
+//                 { zone: "Zone 3", count: 201, level: "High", color: "bg-amber-100 text-amber-700" },
+//                 { zone: "Zone 1", count: 142, level: "Moderate", color: "bg-yellow-100 text-yellow-700" },
+//                 { zone: "Zone 2", count: 89, level: "Low", color: "bg-green-100 text-green-700" },
+//                 { zone: "Zone 5", count: 67, level: "Moderate", color: "bg-yellow-100 text-yellow-700" },
+//               ].map((z) => (
+//                 <div
+//                   key={z.zone}
+//                   className={`flex items-center justify-between p-2 rounded-lg cursor-pointer hover:opacity-80 ${
+//                     selectedZone === z.zone ? "ring-2 ring-blue-500" : ""
+//                   }`}
+//                   style={{
+//                     background:
+//                       z.level === "Critical"
+//                         ? "#fef2f2"
+//                         : z.level === "High"
+//                         ? "#fffbeb"
+//                         : "#f0fdf4",
+//                   }}
+//                   onClick={() => setSelectedZone(z.zone === selectedZone ? null : z.zone)}
+//                 >
+//                   <div>
+//                     <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+//                       {z.zone}
+//                     </p>
+//                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${z.color}`}>
+//                       {z.level}
+//                     </span>
+//                   </div>
+//                   <span className="text-lg font-bold text-slate-700 dark:text-slate-300">
+//                     {z.count}
+//                   </span>
+//                 </div>
+//               ))}
+//             </div>
+//           </SectionCard>
 
-          {selectedZone === "Zone 4" && (
-            <SectionCard title="Zone 4 Details" className="border-blue-300">
-              <div className="space-y-2 text-xs mb-3">
-                {[
-                  ["Total Grievances", "438"],
-                  ["Critical", "42"],
-                  ["High", "97"],
-                  ["Water Supply", "173"],
-                  ["Roads", "122"],
-                  ["Sanitation", "81"],
-                  ["Trend", "↑ 37% this week"],
-                  ["Population", "18,420"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between">
-                    <span className="text-slate-500">{k}</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{v}</span>
-                  </div>
-                ))}
-              </div>
-              <PrimaryBtn className="w-full justify-center text-xs">
-                View Zone Grievances
-              </PrimaryBtn>
-            </SectionCard>
-          )}
+//           {selectedZone === "Zone 4" && (
+//             <SectionCard title="Zone 4 Details" className="border-blue-300">
+//               <div className="space-y-2 text-xs mb-3">
+//                 {[
+//                   ["Total Grievances", "438"],
+//                   ["Critical", "42"],
+//                   ["High", "97"],
+//                   ["Water Supply", "173"],
+//                   ["Roads", "122"],
+//                   ["Sanitation", "81"],
+//                   ["Trend", "↑ 37% this week"],
+//                   ["Population", "18,420"],
+//                 ].map(([k, v]) => (
+//                   <div key={k} className="flex justify-between">
+//                     <span className="text-slate-500">{k}</span>
+//                     <span className="font-semibold text-slate-800 dark:text-slate-200">{v}</span>
+//                   </div>
+//                 ))}
+//               </div>
+//               <PrimaryBtn className="w-full justify-center text-xs">
+//                 View Zone Grievances
+//               </PrimaryBtn>
+//             </SectionCard>
+//           )}
 
-          <AiInsightCard
-            title="AI Spatial Insight"
-            text={
-              <>
-                Zone 4 complaint density <strong>increased 37%</strong> this week. Water supply
-                failures concentrated near Sector 7 market. Consider preemptive inspection.
-              </>
-            }
-            disclaimer="AI-generated insight • Not official action"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+//           <AiInsightCard
+//             title="AI Spatial Insight"
+//             text={
+//               <>
+//                 Zone 4 complaint density <strong>increased 37%</strong> this week. Water supply
+//                 failures concentrated near Sector 7 market. Consider preemptive inspection.
+//               </>
+//             }
+//             disclaimer="AI-generated insight • Not official action"
+//           />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 // ─── SLA Monitoring ───────────────────────────────────────────────────────────
 export function SLAMonitoring({

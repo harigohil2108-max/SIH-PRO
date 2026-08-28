@@ -352,9 +352,7 @@ export function AdminDashboard({
 
       <div className="flex gap-2 flex-wrap">
         {[
-          { label: "🗺 Geographic Intelligence", screen: "geo-intelligence" },
-          { label: "◎ Complaint Clusters", screen: "complaint-clusters" },
-          { label: "✦ AI Analytics", screen: "ai-analytics" },
+          // { label: "🗺 Geographic Intelligence", screen: "geo-intelligence" },
           { label: "📋 Audit Logs", screen: "audit-logs" },
           { label: "📊 Reports", screen: "reports" },
         ].map(({ label, screen }) => (
@@ -1342,286 +1340,137 @@ export function Departments() {
 }
 
 // ─── Geographic Intelligence (Admin) ─────────────────────────────────────────
-export function AdminGeoIntelligence() {
-  const [mapMode, setMapMode] = useState<"markers" | "heatmap" | "clusters">("heatmap");
-  const [selectedZone, setSelectedZone] = useState<string | null>("Zone 4");
+// export function AdminGeoIntelligence() {
+//   const [mapMode, setMapMode] = useState<"markers" | "heatmap" | "clusters">("heatmap");
+//   const [selectedZone, setSelectedZone] = useState<string | null>("Zone 4");
 
-  return (
-    <div className="p-6 space-y-4">
-      <PageHeader
-        title="Geographic Intelligence"
-        subtitle="AI-powered spatial analysis — complaint density, hotspots and trend overlays"
-      >
-        <SecondaryBtn>Export Map</SecondaryBtn>
-        <PrimaryBtn>Generate Zone Report</PrimaryBtn>
-      </PageHeader>
+//   return (
+//     <div className="p-6 space-y-4">
+//       <PageHeader
+//         title="Geographic Intelligence"
+//         subtitle="AI-powered spatial analysis — complaint density, hotspots and trend overlays"
+//       >
+//         <SecondaryBtn>Export Map</SecondaryBtn>
+//         <PrimaryBtn>Generate Zone Report</PrimaryBtn>
+//       </PageHeader>
 
-      <div className="flex gap-3">
-        <KpiCard label="Total Complaints" value="1,247" trend="+12.5%" trendUp={true} />
-        <KpiCard label="Critical Complaints" value="42" trend="+18%" trendUp={false} />
-        <KpiCard label="Active Hotspots" value="3" trend="+50%" trendUp={false} />
-        <KpiCard label="Emerging Trends" value="5" trend="+25%" trendUp={false} />
-        <KpiCard label="Affected Population" value="58,420" trend="+8%" trendUp={false} />
-      </div>
+//       <div className="flex gap-3">
+//         <KpiCard label="Total Complaints" value="1,247" trend="+12.5%" trendUp={true} />
+//         <KpiCard label="Critical Complaints" value="42" trend="+18%" trendUp={false} />
+//         <KpiCard label="Active Hotspots" value="3" trend="+50%" trendUp={false} />
+//         <KpiCard label="Emerging Trends" value="5" trend="+25%" trendUp={false} />
+//         <KpiCard label="Affected Population" value="58,420" trend="+8%" trendUp={false} />
+//       </div>
 
-      <div className="grid grid-cols-4 gap-5">
-        <div className="col-span-3 space-y-3">
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
-            <div className="flex gap-1">
-              {(["markers", "heatmap", "clusters"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMapMode(m)}
-                  className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
-                    mapMode === m ? "bg-[#0f2b4e] text-white" : "text-slate-600 hover:bg-slate-100 dark:bg-slate-700"
-                  }`}
-                >
-                  {m === "markers" ? "📍 Markers" : m === "heatmap" ? "🌡 Heatmap" : "◎ Clusters"}
-                </button>
-              ))}
-            </div>
-            <div className="h-4 w-px bg-slate-200" />
-            <input
-              type="text"
-              placeholder="Search area, zone, locality..."
-              className="flex-1 text-sm text-slate-600 outline-none"
-            />
-            <div className="flex gap-1">
-              {["Layers ∨", "Zones ∨", "Dept. Boundaries ∨"].map((b) => (
-                <button
-                  key={b}
-                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900"
-                >
-                  {b}
-                </button>
-              ))}
-            </div>
-          </div>
-          <MapSvg
-            mode={mapMode}
-            height={500}
-            showControls={true}
-            selectedZone={selectedZone}
-            onZoneClick={(z) => setSelectedZone(z === selectedZone ? null : z)}
-          />
-        </div>
+//       <div className="grid grid-cols-4 gap-5">
+//         <div className="col-span-3 space-y-3">
+//           <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
+//             <div className="flex gap-1">
+//               {(["markers", "heatmap", "clusters"] as const).map((m) => (
+//                 <button
+//                   key={m}
+//                   onClick={() => setMapMode(m)}
+//                   className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+//                     mapMode === m ? "bg-[#0f2b4e] text-white" : "text-slate-600 hover:bg-slate-100 dark:bg-slate-700"
+//                   }`}
+//                 >
+//                   {m === "markers" ? "📍 Markers" : m === "heatmap" ? "🌡 Heatmap" : "◎ Clusters"}
+//                 </button>
+//               ))}
+//             </div>
+//             <div className="h-4 w-px bg-slate-200" />
+//             <input
+//               type="text"
+//               placeholder="Search area, zone, locality..."
+//               className="flex-1 text-sm text-slate-600 outline-none"
+//             />
+//             <div className="flex gap-1">
+//               {["Layers ∨", "Zones ∨", "Dept. Boundaries ∨"].map((b) => (
+//                 <button
+//                   key={b}
+//                   className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 hover:bg-slate-50 dark:bg-slate-900"
+//                 >
+//                   {b}
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+//           <MapSvg
+//             mode={mapMode}
+//             height={500}
+//             showControls={true}
+//             selectedZone={selectedZone}
+//             onZoneClick={(z) => setSelectedZone(z === selectedZone ? null : z)}
+//           />
+//         </div>
 
-        <div className="space-y-3 overflow-y-auto" style={{ maxHeight: 600 }}>
-          <SectionCard title="Zone Summary">
-            <div className="space-y-2">
-              {[
-                { zone: "Zone 4", count: 438, pct: 35, level: "Critical", color: "#ef4444" },
-                { zone: "Zone 3", count: 201, pct: 16, level: "High", color: "#f59e0b" },
-                { zone: "Zone 1", count: 142, pct: 11, level: "Moderate", color: "#eab308" },
-                { zone: "Zone 2", count: 89, pct: 7, level: "Low", color: "#22c55e" },
-                { zone: "Zone 5", count: 67, pct: 5, level: "Moderate", color: "#eab308" },
-                { zone: "Zone 6", count: 45, pct: 4, level: "Low", color: "#22c55e" },
-              ].map((z) => (
-                <div
-                  key={z.zone}
-                  onClick={() => setSelectedZone(z.zone === selectedZone ? null : z.zone)}
-                  className={`p-2 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${
-                    selectedZone === z.zone ? "ring-2 ring-blue-500 bg-blue-50" : "bg-slate-50 dark:bg-slate-900"
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{z.zone}</span>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{z.count}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${z.pct * 2.5}%`, background: z.color }} />
-                  </div>
-                  <span className="text-[10px]" style={{ color: z.color }}>{z.level}</span>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
+//         <div className="space-y-3 overflow-y-auto" style={{ maxHeight: 600 }}>
+//           <SectionCard title="Zone Summary">
+//             <div className="space-y-2">
+//               {[
+//                 { zone: "Zone 4", count: 438, pct: 35, level: "Critical", color: "#ef4444" },
+//                 { zone: "Zone 3", count: 201, pct: 16, level: "High", color: "#f59e0b" },
+//                 { zone: "Zone 1", count: 142, pct: 11, level: "Moderate", color: "#eab308" },
+//                 { zone: "Zone 2", count: 89, pct: 7, level: "Low", color: "#22c55e" },
+//                 { zone: "Zone 5", count: 67, pct: 5, level: "Moderate", color: "#eab308" },
+//                 { zone: "Zone 6", count: 45, pct: 4, level: "Low", color: "#22c55e" },
+//               ].map((z) => (
+//                 <div
+//                   key={z.zone}
+//                   onClick={() => setSelectedZone(z.zone === selectedZone ? null : z.zone)}
+//                   className={`p-2 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${
+//                     selectedZone === z.zone ? "ring-2 ring-blue-500 bg-blue-50" : "bg-slate-50 dark:bg-slate-900"
+//                   }`}
+//                 >
+//                   <div className="flex justify-between items-center mb-1">
+//                     <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{z.zone}</span>
+//                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{z.count}</span>
+//                   </div>
+//                   <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+//                     <div className="h-full rounded-full" style={{ width: `${z.pct * 2.5}%`, background: z.color }} />
+//                   </div>
+//                   <span className="text-[10px]" style={{ color: z.color }}>{z.level}</span>
+//                 </div>
+//               ))}
+//             </div>
+//           </SectionCard>
 
-          {selectedZone === "Zone 4" && (
-            <SectionCard title="Zone 4 — Details" className="border-red-200">
-              <div className="space-y-2 text-xs mb-3">
-                {[
-                  ["Total", "438"], ["Critical", "42"], ["High", "97"], ["Water", "173"],
-                  ["Roads", "122"], ["Sanitation", "81"], ["Trend", "↑ 37%"], ["Population", "18,420"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between">
-                    <span className="text-slate-500">{k}</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{v}</span>
-                  </div>
-                ))}
-              </div>
-              <button className="w-full text-xs bg-red-600 text-white rounded-lg py-1.5 hover:bg-red-700">
-                View Zone Grievances
-              </button>
-            </SectionCard>
-          )}
+//           {selectedZone === "Zone 4" && (
+//             <SectionCard title="Zone 4 — Details" className="border-red-200">
+//               <div className="space-y-2 text-xs mb-3">
+//                 {[
+//                   ["Total", "438"], ["Critical", "42"], ["High", "97"], ["Water", "173"],
+//                   ["Roads", "122"], ["Sanitation", "81"], ["Trend", "↑ 37%"], ["Population", "18,420"],
+//                 ].map(([k, v]) => (
+//                   <div key={k} className="flex justify-between">
+//                     <span className="text-slate-500">{k}</span>
+//                     <span className="font-semibold text-slate-800 dark:text-slate-200">{v}</span>
+//                   </div>
+//                 ))}
+//               </div>
+//               <button className="w-full text-xs bg-red-600 text-white rounded-lg py-1.5 hover:bg-red-700">
+//                 View Zone Grievances
+//               </button>
+//             </SectionCard>
+//           )}
 
-          <AiInsightCard
-            title="AI Spatial Analysis"
-            text={
-              <>
-                Zone 4 complaint density <strong>increased 37%</strong> this week. Water + Roads
-                complaints converging near Sector 7 market. Recommend coordinated infrastructure inspection.
-              </>
-            }
-            disclaimer="AI-generated • Not an official government decision"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+//           <AiInsightCard
+//             title="AI Spatial Analysis"
+//             text={
+//               <>
+//                 Zone 4 complaint density <strong>increased 37%</strong> this week. Water + Roads
+//                 complaints converging near Sector 7 market. Recommend coordinated infrastructure inspection.
+//               </>
+//             }
+//             disclaimer="AI-generated • Not an official government decision"
+//           />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
-// ─── Complaint Clusters ───────────────────────────────────────────────────────
-export function ComplaintClusters({ navigate }: { navigate: (s: string) => void }) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const clusters = [
-    { id: 17, title: "Water Supply Failure", zone: "Zone 4", count: 187, area: "2.4 km²", priority: "Critical", trend: "+64%", trendUp: false, categories: [["Water", 173], ["Sanitation", 14]], first: "Aug 12", latest: "Aug 21" },
-    { id: 12, title: "Road Deterioration", zone: "Zone 3", count: 124, area: "1.8 km²", priority: "High", trend: "+38%", trendUp: false, categories: [["Roads", 98], ["Drainage", 26]], first: "Aug 10", latest: "Aug 21" },
-    { id: 8, title: "Power Outages", zone: "Zone 5", count: 89, area: "3.1 km²", priority: "High", trend: "+22%", trendUp: false, categories: [["Electricity", 89]], first: "Aug 15", latest: "Aug 21" },
-    { id: 5, title: "Garbage Accumulation", zone: "Zone 2", count: 54, area: "0.9 km²", priority: "Medium", trend: "+15%", trendUp: false, categories: [["Sanitation", 42], ["Waste Mgmt", 12]], first: "Aug 18", latest: "Aug 21" },
-  ];
 
-  return (
-    <div className="p-6 space-y-5">
-      <PageHeader
-        title="Complaint Clusters"
-        subtitle="AI-detected emerging civic problem clusters requiring coordinated response"
-      >
-        <SecondaryBtn>Export Analysis</SecondaryBtn>
-        <PrimaryBtn onClick={() => navigate("geo-intelligence")}>View on Map</PrimaryBtn>
-      </PageHeader>
-
-      <div className="grid grid-cols-3 gap-5">
-        <div className="col-span-2 space-y-4">
-          <SectionCard title="Cluster Map Visualization">
-            <MapSvg mode="clusters" height={320} showControls={true} />
-          </SectionCard>
-
-          <div className="space-y-3">
-            {clusters.map((c, i) => (
-              <div
-                key={c.id}
-                onClick={() => setSelected(selected === i ? null : i)}
-                className={`bg-white dark:bg-slate-800 border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all ${
-                  selected === i ? "border-blue-400 shadow-md" : "border-slate-200 dark:border-slate-700"
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-slate-400 font-semibold">CLUSTER #{c.id}</span>
-                      <PriorityBadge priority={c.priority} />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{c.title}</h3>
-                    <p className="text-xs text-slate-500">{c.zone} • {c.area} affected area</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{c.count}</p>
-                    <p className="text-xs text-slate-400">complaints</p>
-                    <p className={`text-xs font-bold mt-0.5 ${c.trendUp ? "text-green-600" : "text-red-600"}`}>
-                      ↑ {c.trend} this week
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-3 text-xs mb-3">
-                  {[["First Reported", c.first], ["Latest", c.latest], ["Zone", c.zone], ["Area", c.area]].map(([k, v]) => (
-                    <div key={k as string}>
-                      <p className="text-slate-400">{k}</p>
-                      <p className="font-semibold text-slate-700 dark:text-slate-300">{v}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-2 flex-1">
-                    {c.categories.map(([cat, n]) => (
-                      <span key={cat as string} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                        {cat}: {n}
-                      </span>
-                    ))}
-                  </div>
-                  <button className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-50 font-medium">
-                    View Cluster Grievances
-                  </button>
-                </div>
-
-                {selected === i && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                    <AiInsightCard
-                      title="AI Cluster Analysis"
-                      text={
-                        <>
-                          This cluster shows <strong>coordinated infrastructure failure</strong> signs.{" "}
-                          {c.count} complaints share similar geo-coordinates and time pattern. Recommend unified field inspection.
-                        </>
-                      }
-                      disclaimer="AI-generated cluster analysis • Not an official decision"
-                      actions={
-                        <>
-                          <button className="text-xs bg-blue-700 text-white px-3 py-1.5 rounded-lg">Assign Task Force</button>
-                          <button className="text-xs border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg">Generate Report</button>
-                        </>
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <SectionCard title="Trend Detection" extra={<AiBadge />}>
-            <div className="space-y-4">
-              {[
-                { cat: "Water Complaints", vals: [42, 56, 81, 124], color: "#2563eb", pct: "+195%" },
-                { cat: "Road Damage", vals: [28, 35, 48, 65], color: "#d97706", pct: "+132%" },
-                { cat: "Power Outages", vals: [18, 22, 34, 41], color: "#f59e0b", pct: "+128%" },
-              ].map((t) => (
-                <div key={t.cat} className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t.cat}</p>
-                    <span className="text-xs font-bold text-red-600">{t.pct}</span>
-                  </div>
-                  {t.vals.map((v, idx) => (
-                    <div key={idx} className="flex items-center gap-2 mb-1 text-xs">
-                      <span className="text-slate-400 w-10">Week {idx + 1}</span>
-                      <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${(v / 124) * 100}%`, background: t.color }} />
-                      </div>
-                      <span className="font-bold text-slate-700 w-6">{v}</span>
-                    </div>
-                  ))}
-                  <p className="text-[10px] text-red-600 mt-1.5 font-medium">⚠ Emerging Hotspot Detected</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-400 mt-3">ⓘ AI-generated trend detection • Not official government data</p>
-          </SectionCard>
-
-          <AiInsightCard
-            title="AI Governance Alert"
-            text={
-              <>
-                3 active cluster patterns detected. Zone 4 Water cluster <strong>highest urgency</strong>. Coordinated
-                multi-department response recommended within 24 hours.
-              </>
-            }
-            disclaimer="AI recommendation • Requires human authorization"
-            actions={
-              <>
-                <button className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg">Trigger Response</button>
-                <button className="text-xs border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg">Dismiss</button>
-              </>
-            }
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── AI Analytics ─────────────────────────────────────────────────────────────
 export function AIAnalytics() {
@@ -1722,99 +1571,834 @@ export function AIAnalytics() {
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 export function AuditLogs() {
-  const events = [
-    { who: "Citizen Priya S.", what: "Complaint Created", detail: "NV-1024 — Pothole near Main Gate", when: "Aug 15, 09:30 AM", why: "Citizen submission", type: "create" },
-    { who: "Nivara AI", what: "AI Classified", detail: "Roads > Pothole — Confidence 94%", when: "Aug 15, 09:31 AM", why: "Automated classification", type: "ai" },
-    { who: "Nivara AI", what: "Priority Generated", detail: "Score 78/100 — High priority", when: "Aug 15, 09:31 AM", why: "AI priority scoring", type: "ai" },
-    { who: "System", what: "Department Assigned", detail: "Routed to Public Works Dept.", when: "Aug 15, 10:00 AM", why: "AI routing — Confidence 96%", type: "system" },
-    { who: "Officer Rajesh K.", what: "Assignment Accepted", detail: "NV-1024 accepted by Rajesh Kumar", when: "Aug 16, 09:00 AM", why: "Officer confirmed assignment", type: "officer" },
-    { who: "Officer Rajesh K.", what: "Priority Changed", detail: "HIGH → CRITICAL", when: "Aug 19, 10:42 AM", why: "Safety risk verified during inspection", type: "override" },
-    { who: "Officer Rajesh K.", what: "Resolution Submitted", detail: "Field repair completed with evidence", when: "Aug 20, 02:15 PM", why: "Repair work confirmed", type: "resolve" },
-    { who: "Citizen Priya S.", what: "Citizen Feedback", detail: "Rated 4/5 — satisfied with resolution", when: "Aug 21, 11:00 AM", why: "Citizen review", type: "feedback" },
-  ];
+  const [grievances, setGrievances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All Events");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
+  const [actorFilter, setActorFilter] = useState("All");
+  const [dateFilter, setDateFilter] = useState("All");
 
-  const typeConfig: Record<string, { color: string; icon: string }> = {
-    create: { color: "bg-blue-100 text-blue-700", icon: "📝" },
-    ai: { color: "bg-purple-100 text-purple-700", icon: "✦" },
-    system: { color: "bg-slate-100 text-slate-600", icon: "⚙" },
-    officer: { color: "bg-green-100 text-green-700", icon: "👤" },
-    override: { color: "bg-amber-100 text-amber-700", icon: "⚡" },
-    resolve: { color: "bg-green-100 text-green-700", icon: "✓" },
-    feedback: { color: "bg-blue-100 text-blue-700", icon: "★" },
+  const EVENTS_PER_PAGE = 8;
+
+  // ─────────────────────────────────────────────────────────────
+  // Load real grievance data
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const loadAuditData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
+        const response = await getMyGrievances(token);
+
+        const items = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.grievances)
+          ? response.grievances
+          : Array.isArray(response?.data)
+          ? response.data
+          : [];
+
+        setGrievances(items);
+      } catch (err) {
+        console.error("Failed to load audit logs:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load audit logs"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAuditData();
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────
+  // Convert grievance data into audit events
+  // ─────────────────────────────────────────────────────────────
+  const events = grievances.flatMap((grievance) => {
+    const generatedEvents: any[] = [];
+
+    const grievanceId =
+      grievance.grievanceId || grievance._id || "Unknown ID";
+
+    const citizenName =
+      typeof grievance.citizen === "object"
+        ? grievance.citizen?.name || "Citizen"
+        : "Citizen";
+
+    const officerName =
+      typeof grievance.assignedOfficer === "object"
+        ? grievance.assignedOfficer?.name || "Officer"
+        : grievance.assignedOfficer || "Officer";
+
+    const departmentName =
+      typeof grievance.department === "object"
+        ? grievance.department?.name || grievance.department?.code
+        : grievance.department || "Unassigned";
+
+    // 1. Complaint Created
+    if (grievance.createdAt) {
+      generatedEvents.push({
+        id: `${grievanceId}-created`,
+        who: citizenName,
+        what: "Complaint Created",
+        detail: `${grievanceId} — ${grievance.title || "Untitled grievance"}`,
+        when: grievance.createdAt,
+        why: "Citizen submission",
+        type: "create",
+        grievanceId,
+      });
+    }
+
+    // 2. AI Classification
+    if (
+      grievance.aiAnalysis?.category ||
+      grievance.aiAnalysis?.subcategory
+    ) {
+      const category =
+        grievance.aiAnalysis?.category ||
+        grievance.category ||
+        "Unclassified";
+
+      const subcategory =
+        grievance.aiAnalysis?.subcategory ||
+        grievance.subcategory ||
+        "";
+
+      const confidence =
+        typeof grievance.aiAnalysis?.confidence === "number"
+          ? `${Math.round(grievance.aiAnalysis.confidence * 100)}%`
+          : "Available";
+
+      generatedEvents.push({
+        id: `${grievanceId}-ai-classification`,
+        who: "Nivara AI",
+        what: "AI Classified",
+        detail: `${category}${
+          subcategory ? ` > ${subcategory}` : ""
+        } — Confidence ${confidence}`,
+        when: grievance.createdAt,
+        why: "Automated classification",
+        type: "ai",
+        grievanceId,
+      });
+    }
+
+    // 3. AI Priority
+    if (
+      grievance.aiAnalysis?.priorityScore !== undefined
+    ) {
+      generatedEvents.push({
+        id: `${grievanceId}-ai-priority`,
+        who: "Nivara AI",
+        what: "Priority Generated",
+        detail: `Score ${grievance.aiAnalysis.priorityScore}/100 — ${
+          grievance.priority || "MEDIUM"
+        } priority`,
+        when: grievance.createdAt,
+        why:
+          grievance.aiAnalysis?.priorityReason ||
+          "AI priority scoring",
+        type: "ai",
+        grievanceId,
+      });
+    }
+
+    // 4. Department assignment
+    if (grievance.department) {
+      generatedEvents.push({
+        id: `${grievanceId}-department`,
+        who: "System",
+        what: "Department Assigned",
+        detail: `Routed to ${departmentName}`,
+        when:
+          grievance.timeline?.find(
+            (item: any) =>
+              String(item.message || "")
+                .toLowerCase()
+                .includes("department")
+          )?.timestamp || grievance.createdAt,
+        why: "Department routing",
+        type: "system",
+        grievanceId,
+      });
+    }
+
+    // 5. Timeline events from MongoDB
+    if (Array.isArray(grievance.timeline)) {
+      grievance.timeline.forEach(
+        (timelineItem: any, index: number) => {
+          const status = String(
+            timelineItem.status || ""
+          ).toUpperCase();
+
+          const message =
+            timelineItem.message ||
+            status.replace(/_/g, " ") ||
+            "Grievance updated";
+
+          let type = "system";
+          let what = status
+            ? status.replace(/_/g, " ")
+            : "Grievance Updated";
+
+          const lowerMessage = message.toLowerCase();
+
+          // AI-related event
+          if (
+            lowerMessage.includes("ai") ||
+            lowerMessage.includes("automated") ||
+            lowerMessage.includes("classification") ||
+            lowerMessage.includes("priority scoring")
+          ) {
+            type = "ai";
+          }
+
+          // Human override / decision
+          if (
+            lowerMessage.includes("override") ||
+            lowerMessage.includes("priority changed") ||
+            lowerMessage.includes("decision")
+          ) {
+            type = "override";
+            what = "Human Decision";
+          }
+
+          // Resolution
+          if (
+            status === "RESOLVED" ||
+            status === "CLOSED" ||
+            lowerMessage.includes("resolution") ||
+            lowerMessage.includes("resolved")
+          ) {
+            type = "resolve";
+            what = "Resolution Update";
+          }
+
+          // Citizen action
+          if (
+            lowerMessage.includes("feedback") ||
+            lowerMessage.includes("citizen")
+          ) {
+            type = "feedback";
+            what = "Citizen Action";
+          }
+
+          generatedEvents.push({
+            id: `${grievanceId}-timeline-${index}`,
+            who:
+              timelineItem.actor?.name ||
+              timelineItem.actor?.email ||
+              (type === "ai"
+                ? "Nivara AI"
+                : type === "feedback"
+                ? citizenName
+                : officerName),
+            what,
+            detail: `${grievanceId} — ${message}`,
+            when:
+              timelineItem.timestamp ||
+              grievance.updatedAt ||
+              grievance.createdAt,
+            why:
+              type === "ai"
+                ? "Automated platform decision"
+                : type === "override"
+                ? "Human decision or override"
+                : type === "resolve"
+                ? "Resolution workflow"
+                : type === "feedback"
+                ? "Citizen action"
+                : "System workflow",
+            type,
+            grievanceId,
+          });
+        }
+      );
+    }
+
+    // 6. Resolution
+    if (grievance.resolution?.resolvedAt) {
+      generatedEvents.push({
+        id: `${grievanceId}-resolution`,
+        who:
+          typeof grievance.resolution?.resolvedBy === "object"
+            ? grievance.resolution?.resolvedBy?.name || officerName
+            : officerName,
+        what: "Resolution Submitted",
+        detail:
+          grievance.resolution?.message ||
+          `${grievanceId} marked as resolved`,
+        when: grievance.resolution.resolvedAt,
+        why: "Resolution submitted",
+        type: "resolve",
+        grievanceId,
+      });
+    }
+
+    // 7. Citizen feedback
+    if (grievance.feedback?.submittedAt) {
+      generatedEvents.push({
+        id: `${grievanceId}-feedback`,
+        who: citizenName,
+        what: "Citizen Feedback",
+        detail: `Rated ${
+          grievance.feedback.rating || "—"
+        }/5${
+          grievance.feedback.comment
+            ? ` — ${grievance.feedback.comment}`
+            : ""
+        }`,
+        when: grievance.feedback.submittedAt,
+        why: "Citizen review",
+        type: "feedback",
+        grievanceId,
+      });
+    }
+
+    return generatedEvents;
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Sort newest first
+  // ─────────────────────────────────────────────────────────────
+  const sortedEvents = [...events].sort(
+    (a, b) =>
+      new Date(b.when).getTime() -
+      new Date(a.when).getTime()
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // Filter by tab
+  // ─────────────────────────────────────────────────────────────
+  const filteredByType = sortedEvents.filter((event) => {
+    switch (activeFilter) {
+      case "AI Decisions":
+        return event.type === "ai";
+
+      case "Human Overrides":
+        return event.type === "override";
+
+      case "Resolutions":
+        return event.type === "resolve";
+
+      case "System Events":
+        return event.type === "system";
+
+      case "Citizen Actions":
+        return (
+          event.type === "create" ||
+          event.type === "feedback"
+        );
+
+      default:
+        return true;
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Search + advanced filters
+  // ─────────────────────────────────────────────────────────────
+  const filteredEvents = filteredByType.filter((event) => {
+    const query = search.trim().toLowerCase();
+
+    const matchesSearch =
+      !query ||
+      String(event.grievanceId || "")
+        .toLowerCase()
+        .includes(query) ||
+      String(event.who || "")
+        .toLowerCase()
+        .includes(query) ||
+      String(event.what || "")
+        .toLowerCase()
+        .includes(query) ||
+      String(event.detail || "")
+        .toLowerCase()
+        .includes(query) ||
+      String(event.why || "")
+        .toLowerCase()
+        .includes(query);
+
+    const matchesActor =
+      actorFilter === "All" ||
+      String(event.who || "") === actorFilter;
+
+    let matchesDate = true;
+
+    if (dateFilter !== "All") {
+      const eventDate = new Date(event.when);
+      const now = new Date();
+
+      if (dateFilter === "Today") {
+        matchesDate =
+          eventDate.toDateString() === now.toDateString();
+      }
+
+      if (dateFilter === "7 Days") {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        matchesDate = eventDate >= sevenDaysAgo;
+      }
+
+      if (dateFilter === "30 Days") {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+        matchesDate = eventDate >= thirtyDaysAgo;
+      }
+    }
+
+    return (
+      matchesSearch &&
+      matchesActor &&
+      matchesDate
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // Pagination
+  // ─────────────────────────────────────────────────────────────
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredEvents.length / EVENTS_PER_PAGE
+    )
+  );
+
+  const safePage = Math.min(
+    currentPage,
+    totalPages
+  );
+
+  const startIndex =
+    (safePage - 1) * EVENTS_PER_PAGE;
+
+  const paginatedEvents = filteredEvents.slice(
+    startIndex,
+    startIndex + EVENTS_PER_PAGE
+  );
+
+  // Reset page when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeFilter, actorFilter, dateFilter]);
+
+  // ─────────────────────────────────────────────────────────────
+  // Export current filtered logs
+  // ─────────────────────────────────────────────────────────────
+  const exportLogs = () => {
+    if (filteredEvents.length === 0) {
+      alert("No audit logs available to export.");
+      return;
+    }
+
+    const headers = [
+      "Grievance ID",
+      "Event",
+      "Details",
+      "WHO",
+      "WHY",
+      "Date",
+    ];
+
+    const escapeCSV = (value: any) =>
+      `"${String(value ?? "")
+        .replace(/"/g, '""')}"`;
+
+    const rows = filteredEvents.map((event) =>
+      [
+        event.grievanceId,
+        event.what,
+        event.detail,
+        event.who,
+        event.why,
+        new Date(event.when).toLocaleString("en-IN"),
+      ]
+        .map(escapeCSV)
+        .join(",")
+    );
+
+    const csv =
+      "\uFEFF" +
+      [headers.join(","), ...rows].join("\n");
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `nivara-audit-logs-${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Unique actors for filter
+  // ─────────────────────────────────────────────────────────────
+  const actors = Array.from(
+    new Set(
+      sortedEvents
+        .map((event) => event.who)
+        .filter(Boolean)
+    )
+  );
+
+  const typeConfig: Record<
+    string,
+    { color: string; icon: string }
+  > = {
+    create: {
+      color: "bg-blue-100 text-blue-700",
+      icon: "📝",
+    },
+    ai: {
+      color: "bg-purple-100 text-purple-700",
+      icon: "✦",
+    },
+    system: {
+      color: "bg-slate-100 text-slate-600",
+      icon: "⚙",
+    },
+    officer: {
+      color: "bg-green-100 text-green-700",
+      icon: "👤",
+    },
+    override: {
+      color: "bg-amber-100 text-amber-700",
+      icon: "⚡",
+    },
+    resolve: {
+      color: "bg-green-100 text-green-700",
+      icon: "✓",
+    },
+    feedback: {
+      color: "bg-blue-100 text-blue-700",
+      icon: "★",
+    },
+  };
+
+  const formatDateTime = (date: string) => {
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return "Unknown";
+    }
+
+    return parsed.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Audit Logs" subtitle="Complete immutable audit trail of all platform events and decisions">
-        <SecondaryBtn>Export Logs</SecondaryBtn>
-        <SecondaryBtn>Filter</SecondaryBtn>
+      <PageHeader
+        title="Audit Logs"
+        subtitle="Complete audit trail of platform events and decisions"
+      >
+        <SecondaryBtn onClick={exportLogs}>
+          Export Logs
+        </SecondaryBtn>
+
+        <SecondaryBtn
+          onClick={() =>
+            setShowFilters((previous) => !previous)
+          }
+        >
+          Filter
+        </SecondaryBtn>
       </PageHeader>
 
-      <div className="flex gap-2 flex-wrap">
-        {["All Events", "AI Decisions", "Human Overrides", "Resolutions", "System Events", "Citizen Actions"].map((f) => (
-          <FilterChip key={f} label={f} active={f === "All Events"} />
+      {/* Tabs + Search */}
+      <div className="flex gap-2 flex-wrap items-center">
+        {[
+          "All Events",
+          "AI Decisions",
+          "Human Overrides",
+          "Resolutions",
+          "System Events",
+          "Citizen Actions",
+        ].map((filter) => (
+          <FilterChip
+            key={filter}
+            label={filter}
+            active={activeFilter === filter}
+            onClick={() => setActiveFilter(filter)}
+          />
         ))}
+
         <div className="ml-auto">
           <input
             type="text"
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
             placeholder="Search logs..."
-            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 rounded-lg text-xs text-slate-600 outline-none focus:border-blue-400 w-48"
+            className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 rounded-lg text-xs text-slate-600 outline-none focus:border-blue-400 w-52"
           />
         </div>
       </div>
 
-      <SectionCard>
-        <div className="space-y-0">
-          {events.map((e, i) => {
-            const cfg = typeConfig[e.type];
-            return (
-              <div key={i} className="flex gap-4 py-4 border-b border-slate-50 hover:bg-slate-50 rounded-lg px-2 transition-colors">
-                <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${cfg.color}`}>
-                    {cfg.icon}
-                  </div>
-                  {i < events.length - 1 && <div className="w-px flex-1 bg-slate-100 mt-2" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{e.what}</span>
-                        {e.type === "ai" && <AiBadge />}
-                        {e.type === "override" && (
-                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
-                            HUMAN OVERRIDE
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600 mt-0.5">{e.detail}</p>
-                    </div>
-                    <span className="text-xs text-slate-400 flex-shrink-0">{e.when}</span>
-                  </div>
-                  <div className="flex gap-4 mt-1 text-xs text-slate-500">
-                    <span><strong className="text-slate-700 dark:text-slate-300">WHO:</strong> {e.who}</span>
-                    <span><strong className="text-slate-700 dark:text-slate-300">WHY:</strong> {e.why}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
-          <span>Showing 8 of 1,247 events</span>
-          <div className="flex gap-1">
-            {["←", "1", "2", "3", "...", "→"].map((p, i) => (
-              <button
-                key={i}
-                className={`w-7 h-7 rounded text-xs ${
-                  p === "1" ? "bg-blue-600 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 rounded-xl p-4 flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Actor
+            </label>
+
+            <select
+              value={actorFilter}
+              onChange={(e) =>
+                setActorFilter(e.target.value)
+              }
+              className="border border-slate-200 rounded-lg px-3 py-2 text-xs bg-white"
+            >
+              <option value="All">All Actors</option>
+
+              {actors.map((actor) => (
+                <option key={actor} value={actor}>
+                  {actor}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Date
+            </label>
+
+            <select
+              value={dateFilter}
+              onChange={(e) =>
+                setDateFilter(e.target.value)
+              }
+              className="border border-slate-200 rounded-lg px-3 py-2 text-xs bg-white"
+            >
+              <option value="All">All Dates</option>
+              <option value="Today">Today</option>
+              <option value="7 Days">Last 7 Days</option>
+              <option value="30 Days">
+                Last 30 Days
+              </option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActorFilter("All");
+              setDateFilter("All");
+              setSearch("");
+            }}
+            className="px-3 py-2 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
+            Clear Filters
+          </button>
         </div>
+      )}
+
+      <SectionCard>
+        {loading ? (
+          <div className="py-12 text-center text-sm text-slate-500">
+            Loading audit logs...
+          </div>
+        ) : error ? (
+          <div className="py-12 text-center text-sm text-red-600">
+            {error}
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="py-12 text-center text-sm text-slate-500">
+            No audit events found.
+          </div>
+        ) : (
+          <>
+            <div className="space-y-0">
+              {paginatedEvents.map((event, index) => {
+                const cfg =
+                  typeConfig[event.type] ||
+                  typeConfig.system;
+
+                const isLast =
+                  index ===
+                  paginatedEvents.length - 1;
+
+                return (
+                  <div
+                    key={event.id}
+                    className="flex gap-4 py-4 border-b border-slate-50 hover:bg-slate-50 rounded-lg px-2 transition-colors"
+                  >
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${cfg.color}`}
+                      >
+                        {cfg.icon}
+                      </div>
+
+                      {!isLast && (
+                        <div className="w-px flex-1 bg-slate-100 mt-2" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                              {event.what}
+                            </span>
+
+                            {event.type === "ai" && (
+                              <AiBadge />
+                            )}
+
+                            {event.type ===
+                              "override" && (
+                              <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+                                HUMAN OVERRIDE
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            {event.detail}
+                          </p>
+                        </div>
+
+                        <span className="text-xs text-slate-400 flex-shrink-0">
+                          {formatDateTime(
+                            event.when
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex gap-4 mt-1 text-xs text-slate-500 flex-wrap">
+                        <span>
+                          <strong className="text-slate-700 dark:text-slate-300">
+                            WHO:
+                          </strong>{" "}
+                          {event.who}
+                        </span>
+
+                        <span>
+                          <strong className="text-slate-700 dark:text-slate-300">
+                            WHY:
+                          </strong>{" "}
+                          {event.why}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
+              <span>
+                Showing{" "}
+                {filteredEvents.length === 0
+                  ? 0
+                  : startIndex + 1}
+                –
+                {Math.min(
+                  startIndex +
+                    EVENTS_PER_PAGE,
+                  filteredEvents.length
+                )}{" "}
+                of {filteredEvents.length} events
+              </span>
+
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  disabled={safePage === 1}
+                  onClick={() =>
+                    setCurrentPage(
+                      (page) =>
+                        Math.max(1, page - 1)
+                    )
+                  }
+                  className="w-7 h-7 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  ←
+                </button>
+
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1
+                )
+                  .slice(
+                    Math.max(0, safePage - 3),
+                    Math.min(
+                      totalPages,
+                      safePage + 2
+                    )
+                  )
+                  .map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage(page)
+                      }
+                      className={`w-7 h-7 rounded text-xs ${
+                        page === safePage
+                          ? "bg-blue-600 text-white"
+                          : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                <button
+                  type="button"
+                  disabled={
+                    safePage === totalPages
+                  }
+                  onClick={() =>
+                    setCurrentPage(
+                      (page) =>
+                        Math.min(
+                          totalPages,
+                          page + 1
+                        )
+                    )
+                  }
+                  className="w-7 h-7 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </SectionCard>
     </div>
   );
@@ -1823,100 +2407,954 @@ export function AuditLogs() {
 // ─── Reports ──────────────────────────────────────────────────────────────────
 export function Reports() {
   const [selected, setSelected] = useState("Grievance Report");
-  const types = ["Grievance Report", "Department Performance", "SLA Report", "Geographic Report", "AI Performance Report", "Audit Report"];
+
+  const [grievances, setGrievances] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+
+  const [dateRange, setDateRange] = useState("Last 30 days");
+  const [departmentFilter, setDepartmentFilter] = useState("All Departments");
+  const [categoryFilter, setCategoryFilter] = useState("All Categories");
+  const [zoneFilter, setZoneFilter] = useState("All Zones");
+  const [priorityFilter, setPriorityFilter] = useState("All Priorities");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+
+  const [recentReports, setRecentReports] = useState<any[]>([]);
+
+  const types = [
+    "Grievance Report",
+    "Department Performance",
+    "SLA Report",
+    "Geographic Report",
+    "AI Performance Report",
+    "Audit Report",
+  ];
+
+  // ─────────────────────────────────────────────────────────────
+  // Load real data
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const loadReportData = async () => {
+      try {
+        setLoading(true);
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
+        const [grievanceResponse, departmentResponse] =
+          await Promise.all([
+            getMyGrievances(token),
+            getDepartments(token),
+          ]);
+
+        const grievanceItems = Array.isArray(grievanceResponse)
+          ? grievanceResponse
+          : Array.isArray(grievanceResponse?.grievances)
+          ? grievanceResponse.grievances
+          : Array.isArray(grievanceResponse?.data)
+          ? grievanceResponse.data
+          : [];
+
+        const departmentItems = Array.isArray(
+          departmentResponse?.departments
+        )
+          ? departmentResponse.departments
+          : [];
+
+        setGrievances(grievanceItems);
+        setDepartments(departmentItems);
+      } catch (error) {
+        console.error(
+          "Failed to load report data:",
+          error
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReportData();
+
+    // Load locally generated reports
+    try {
+      const storedReports = localStorage.getItem(
+        "nivara_recent_reports"
+      );
+
+      if (storedReports) {
+        setRecentReports(JSON.parse(storedReports));
+      }
+    } catch {
+      setRecentReports([]);
+    }
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────
+  // Get department name
+  // ─────────────────────────────────────────────────────────────
+  const getDepartmentName = (grievance: any) => {
+    if (!grievance?.department) {
+      return "Unassigned";
+    }
+
+    if (typeof grievance.department === "string") {
+      return grievance.department;
+    }
+
+    return (
+      grievance.department?.name ||
+      grievance.department?.code ||
+      "Unassigned"
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Get zone
+  // ─────────────────────────────────────────────────────────────
+  const getZone = (grievance: any) => {
+    return (
+      grievance?.zone ||
+      grievance?.location?.zone ||
+      grievance?.location?.area ||
+      grievance?.location?.district ||
+      "Unknown"
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Date filtering
+  // ─────────────────────────────────────────────────────────────
+  const matchesDateRange = (grievance: any) => {
+    if (dateRange === "All time") {
+      return true;
+    }
+
+    if (!grievance?.createdAt) {
+      return false;
+    }
+
+    const createdAt = new Date(
+      grievance.createdAt
+    );
+
+    if (Number.isNaN(createdAt.getTime())) {
+      return false;
+    }
+
+    const now = new Date();
+
+    let days = 30;
+
+    if (dateRange === "Last 7 days") {
+      days = 7;
+    }
+
+    if (dateRange === "Last 30 days") {
+      days = 30;
+    }
+
+    if (dateRange === "Last 90 days") {
+      days = 90;
+    }
+
+    if (dateRange === "This year") {
+      return (
+        createdAt.getFullYear() ===
+        now.getFullYear()
+      );
+    }
+
+    const startDate = new Date();
+    startDate.setDate(
+      now.getDate() - days
+    );
+
+    return createdAt >= startDate;
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Filter available grievances
+  // ─────────────────────────────────────────────────────────────
+  const filteredGrievances = grievances.filter(
+    (grievance) => {
+      const matchesDepartment =
+        departmentFilter === "All Departments" ||
+        getDepartmentName(grievance) ===
+          departmentFilter;
+
+      const matchesCategory =
+        categoryFilter === "All Categories" ||
+        String(
+          grievance.category || ""
+        ) === categoryFilter;
+
+      const matchesZone =
+        zoneFilter === "All Zones" ||
+        getZone(grievance) === zoneFilter;
+
+      const matchesPriority =
+        priorityFilter === "All Priorities" ||
+        String(
+          grievance.priority || ""
+        ).toUpperCase() ===
+          priorityFilter.toUpperCase();
+
+      const matchesStatus =
+        statusFilter === "All Statuses" ||
+        String(
+          grievance.status || ""
+        ).toUpperCase() ===
+          statusFilter.toUpperCase();
+
+      return (
+        matchesDateRange(grievance) &&
+        matchesDepartment &&
+        matchesCategory &&
+        matchesZone &&
+        matchesPriority &&
+        matchesStatus
+      );
+    }
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // Dynamic dropdown options
+  // ─────────────────────────────────────────────────────────────
+  const categories = Array.from(
+    new Set(
+      grievances
+        .map((g) => g.category)
+        .filter(Boolean)
+    )
+  );
+
+  const zones = Array.from(
+    new Set(
+      grievances
+        .map((g) => getZone(g))
+        .filter(
+          (zone) => zone && zone !== "Unknown"
+        )
+    )
+  );
+
+  const priorities = Array.from(
+    new Set(
+      grievances
+        .map((g) => g.priority)
+        .filter(Boolean)
+    )
+  );
+
+  const statuses = Array.from(
+    new Set(
+      grievances
+        .map((g) => g.status)
+        .filter(Boolean)
+    )
+  );
+
+  // ─────────────────────────────────────────────────────────────
+  // Report statistics
+  // ─────────────────────────────────────────────────────────────
+  const totalRecords =
+    filteredGrievances.length;
+
+  const resolvedRecords =
+    filteredGrievances.filter(
+      (g) =>
+        g.status === "RESOLVED" ||
+        g.status === "CLOSED"
+    ).length;
+
+  const openRecords =
+    filteredGrievances.filter(
+      (g) =>
+        ![
+          "RESOLVED",
+          "CLOSED",
+          "REJECTED",
+        ].includes(g.status)
+    ).length;
+
+  const criticalRecords =
+    filteredGrievances.filter(
+      (g) =>
+        String(g.priority).toUpperCase() ===
+        "CRITICAL"
+    ).length;
+
+  const slaRecords =
+    filteredGrievances.filter(
+      (g) => g?.sla?.dueAt
+    );
+
+  const slaBreached =
+    slaRecords.filter((g) => {
+      if (g?.sla?.breached === true) {
+        return true;
+      }
+
+      return (
+        new Date(
+          g.sla.dueAt
+        ).getTime() < Date.now()
+      );
+    }).length;
+
+  const slaCompliance =
+    slaRecords.length > 0
+      ? (
+          ((slaRecords.length -
+            slaBreached) /
+            slaRecords.length) *
+          100
+        ).toFixed(1)
+      : "0.0";
+
+  // ─────────────────────────────────────────────────────────────
+  // Create CSV from filtered report
+  // ─────────────────────────────────────────────────────────────
+  const exportReportCSV = () => {
+    if (filteredGrievances.length === 0) {
+      alert(
+        "No records match the selected filters."
+      );
+      return;
+    }
+
+    exportGrievancesToCSV(
+      filteredGrievances,
+      `${selected
+        .toLowerCase()
+        .replace(/\s+/g, "_")}.csv`
+    );
+
+    saveRecentReport();
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Export PDF
+  // ─────────────────────────────────────────────────────────────
+  const exportReportPDF = () => {
+    if (filteredGrievances.length === 0) {
+      alert(
+        "No records match the selected filters."
+      );
+      return;
+    }
+
+    exportGrievancesToPDF(
+      filteredGrievances,
+      `${selected
+        .toLowerCase()
+        .replace(/\s+/g, "_")}.pdf`
+    );
+
+    saveRecentReport();
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Generate report
+  // ─────────────────────────────────────────────────────────────
+  const generateReport = () => {
+    if (filteredGrievances.length === 0) {
+      alert(
+        "No records match the selected filters."
+      );
+      return;
+    }
+
+    setGenerating(true);
+
+    setTimeout(() => {
+      exportGrievancesToCSV(
+        filteredGrievances,
+        `${selected
+          .toLowerCase()
+          .replace(/\s+/g, "_")}_generated.csv`
+      );
+
+      saveRecentReport();
+
+      setGenerating(false);
+
+      alert(
+        `${selected} generated successfully.\n\n${filteredGrievances.length} records included.`
+      );
+    }, 500);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Save generated report in browser history
+  // ─────────────────────────────────────────────────────────────
+  const saveRecentReport = () => {
+    const report = {
+      id: Date.now(),
+      name: `${selected} — ${new Date().toLocaleDateString(
+        "en-IN"
+      )}`,
+      date: new Date().toLocaleString("en-IN"),
+      records: filteredGrievances.length,
+      size: `${Math.max(
+        1,
+        Math.round(
+          (filteredGrievances.length *
+            0.8) /
+            100
+        ) / 10
+      )} MB`,
+    };
+
+    const existing = [...recentReports];
+
+    const updated = [
+      report,
+      ...existing,
+    ].slice(0, 10);
+
+    setRecentReports(updated);
+
+    localStorage.setItem(
+      "nivara_recent_reports",
+      JSON.stringify(updated)
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Scheduled Reports
+  // ─────────────────────────────────────────────────────────────
+  const handleScheduledReports = () => {
+    alert(
+      "Scheduled Reports\n\nReport scheduling is ready to be connected to a backend scheduler."
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Reset filters
+  // ─────────────────────────────────────────────────────────────
+  const resetFilters = () => {
+    setDateRange("Last 30 days");
+    setDepartmentFilter(
+      "All Departments"
+    );
+    setCategoryFilter(
+      "All Categories"
+    );
+    setZoneFilter("All Zones");
+    setPriorityFilter(
+      "All Priorities"
+    );
+    setStatusFilter("All Statuses");
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Date range text
+  // ─────────────────────────────────────────────────────────────
+  const getDateRangeText = () => {
+    if (dateRange === "All time") {
+      return "All available records";
+    }
+
+    if (dateRange === "This year") {
+      return `Jan 1 – ${new Date().toLocaleDateString(
+        "en-IN"
+      )}`;
+    }
+
+    const days =
+      dateRange === "Last 7 days"
+        ? 7
+        : dateRange === "Last 90 days"
+        ? 90
+        : 30;
+
+    const start = new Date();
+
+    start.setDate(
+      start.getDate() - days
+    );
+
+    return `${start.toLocaleDateString(
+      "en-IN"
+    )} – ${new Date().toLocaleDateString(
+      "en-IN"
+    )}`;
+  };
 
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Report Generation" subtitle="Generate, filter and export platform reports">
-        <SecondaryBtn>Scheduled Reports</SecondaryBtn>
-        <PrimaryBtn>+ Generate Report</PrimaryBtn>
+      <PageHeader
+        title="Report Generation"
+        subtitle="Generate, filter and export platform reports"
+      >
+        <SecondaryBtn
+          onClick={handleScheduledReports}
+        >
+          Scheduled Reports
+        </SecondaryBtn>
+
+        <PrimaryBtn
+          onClick={generateReport}
+        >
+          {generating
+            ? "Generating..."
+            : "+ Generate Report"}
+        </PrimaryBtn>
       </PageHeader>
 
       <div className="grid grid-cols-3 gap-5">
+        {/* ─────────────────────────────────────────────
+            Report Types
+        ───────────────────────────────────────────── */}
         <div className="space-y-3">
           <SectionCard title="Report Type">
             <div className="space-y-1">
-              {types.map((t) => (
+              {types.map((type) => (
                 <button
-                  key={t}
-                  onClick={() => setSelected(t)}
+                  key={type}
+                  type="button"
+                  onClick={() =>
+                    setSelected(type)
+                  }
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    selected === t
+                    selected === type
                       ? "bg-blue-50 text-blue-700 font-semibold border border-blue-200"
                       : "text-slate-600 hover:bg-slate-50 dark:bg-slate-900"
                   }`}
                 >
-                  {t}
+                  {type}
                 </button>
               ))}
             </div>
           </SectionCard>
+
+          {/* Quick statistics */}
+          <SectionCard title="Current Data">
+            {loading ? (
+              <p className="text-xs text-slate-500">
+                Loading data...
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-500">
+                    Total records
+                  </span>
+
+                  <strong className="text-sm">
+                    {totalRecords}
+                  </strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-500">
+                    Open
+                  </span>
+
+                  <strong className="text-sm">
+                    {openRecords}
+                  </strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-500">
+                    Resolved
+                  </span>
+
+                  <strong className="text-sm">
+                    {resolvedRecords}
+                  </strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-500">
+                    Critical
+                  </span>
+
+                  <strong className="text-sm">
+                    {criticalRecords}
+                  </strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-500">
+                    SLA Compliance
+                  </span>
+
+                  <strong className="text-sm">
+                    {slaCompliance}%
+                  </strong>
+                </div>
+              </div>
+            )}
+          </SectionCard>
         </div>
 
+        {/* ─────────────────────────────────────────────
+            Configuration
+        ───────────────────────────────────────────── */}
         <div className="col-span-2 space-y-4">
-          <SectionCard title={`Configure: ${selected}`}>
+          <SectionCard
+            title={`Configure: ${selected}`}
+          >
             <div className="grid grid-cols-2 gap-4 mb-4">
-              {[
-                ["Date Range", "Last 30 days ∨"],
-                ["Department", "All Departments ∨"],
-                ["Category", "All Categories ∨"],
-                ["Zone", "All Zones ∨"],
-                ["Priority", "All Priorities ∨"],
-                ["Status", "All Statuses ∨"],
-              ].map(([label, val]) => (
-                <div key={label}>
-                  <p className="text-xs text-slate-500 mb-1">{label}</p>
-                  <button className="w-full text-left px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 hover:border-blue-400 transition-colors">
-                    {val}
-                  </button>
-                </div>
-              ))}
-            </div>
+              {/* Date */}
+              <div>
+                <p className="text-xs text-slate-500 mb-1">
+                  Date Range
+                </p>
 
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-4">
-              <p className="text-xs font-semibold text-slate-700 mb-2">Preview — {selected}</p>
-              <div className="space-y-1 text-xs text-slate-500">
-                <p>• Period: Aug 1 – Aug 21, 2026</p>
-                <p>• Total records: 1,247 grievances</p>
-                <p>• Departments: 12 active</p>
-                <p>• Estimated file size: ~2.4 MB</p>
+                <select
+                  value={dateRange}
+                  onChange={(e) =>
+                    setDateRange(
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option>
+                    Last 7 days
+                  </option>
+                  <option>
+                    Last 30 days
+                  </option>
+                  <option>
+                    Last 90 days
+                  </option>
+                  <option>
+                    This year
+                  </option>
+                  <option>
+                    All time
+                  </option>
+                </select>
+              </div>
+
+              {/* Department */}
+              <div>
+                <p className="text-xs text-slate-500 mb-1">
+                  Department
+                </p>
+
+                <select
+                  value={departmentFilter}
+                  onChange={(e) =>
+                    setDepartmentFilter(
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option>
+                    All Departments
+                  </option>
+
+                  {departments.map(
+                    (department) => (
+                      <option
+                        key={
+                          department._id ||
+                          department.code ||
+                          department.name
+                        }
+                        value={
+                          department.name ||
+                          department.code
+                        }
+                      >
+                        {department.name ||
+                          department.code}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* Category */}
+              <div>
+                <p className="text-xs text-slate-500 mb-1">
+                  Category
+                </p>
+
+                <select
+                  value={categoryFilter}
+                  onChange={(e) =>
+                    setCategoryFilter(
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option>
+                    All Categories
+                  </option>
+
+                  {categories.map(
+                    (category) => (
+                      <option
+                        key={category}
+                        value={category}
+                      >
+                        {category}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* Zone */}
+              <div>
+                <p className="text-xs text-slate-500 mb-1">
+                  Zone
+                </p>
+
+                <select
+                  value={zoneFilter}
+                  onChange={(e) =>
+                    setZoneFilter(
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option>
+                    All Zones
+                  </option>
+
+                  {zones.map((zone) => (
+                    <option
+                      key={zone}
+                      value={zone}
+                    >
+                      {zone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <p className="text-xs text-slate-500 mb-1">
+                  Priority
+                </p>
+
+                <select
+                  value={priorityFilter}
+                  onChange={(e) =>
+                    setPriorityFilter(
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option>
+                    All Priorities
+                  </option>
+
+                  {priorities.map(
+                    (priority) => (
+                      <option
+                        key={priority}
+                        value={priority}
+                      >
+                        {priority}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <p className="text-xs text-slate-500 mb-1">
+                  Status
+                </p>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option>
+                    All Statuses
+                  </option>
+
+                  {statuses.map((status) => (
+                    <option
+                      key={status}
+                      value={status}
+                    >
+                      {status}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
+            {/* Preview */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-4">
+              <p className="text-xs font-semibold text-slate-700 mb-2">
+                Preview — {selected}
+              </p>
+
+              <div className="grid grid-cols-2 gap-y-1 text-xs text-slate-500">
+                <p>
+                  • Period:{" "}
+                  {getDateRangeText()}
+                </p>
+
+                <p>
+                  • Total records:{" "}
+                  <strong className="text-slate-700">
+                    {totalRecords}
+                  </strong>
+                </p>
+
+                <p>
+                  • Departments:{" "}
+                  <strong className="text-slate-700">
+                    {departments.length}
+                  </strong>
+                </p>
+
+                <p>
+                  • Open cases:{" "}
+                  <strong className="text-slate-700">
+                    {openRecords}
+                  </strong>
+                </p>
+
+                <p>
+                  • Resolved cases:{" "}
+                  <strong className="text-slate-700">
+                    {resolvedRecords}
+                  </strong>
+                </p>
+
+                <p>
+                  • SLA compliance:{" "}
+                  <strong className="text-slate-700">
+                    {slaCompliance}%
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Buttons */}
             <div className="flex gap-2">
-              <PrimaryBtn className="flex-1 justify-center">Generate Report</PrimaryBtn>
-              <SecondaryBtn className="flex-1 justify-center">Export CSV</SecondaryBtn>
-              <SecondaryBtn className="flex-1 justify-center">Export PDF</SecondaryBtn>
+              <PrimaryBtn
+                onClick={generateReport}
+                className="flex-1 justify-center"
+              >
+                {generating
+                  ? "Generating..."
+                  : "Generate Report"}
+              </PrimaryBtn>
+
+              <SecondaryBtn
+                onClick={exportReportCSV}
+                className="flex-1 justify-center"
+              >
+                Export CSV
+              </SecondaryBtn>
+
+              <SecondaryBtn
+                onClick={exportReportPDF}
+                className="flex-1 justify-center"
+              >
+                Export PDF
+              </SecondaryBtn>
+            </div>
+
+            {/* Reset */}
+            <div className="flex justify-end mt-3">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="text-xs text-slate-500 hover:text-blue-600 underline"
+              >
+                Reset filters
+              </button>
             </div>
           </SectionCard>
 
+          {/* ─────────────────────────────────────────────
+              Recent Reports
+          ───────────────────────────────────────────── */}
           <SectionCard title="Recent Reports">
-            <div className="space-y-2">
-              {[
-                { name: "Monthly SLA Report — July 2026", date: "Aug 1, 9:00 AM", size: "1.8 MB" },
-                { name: "Department Performance Q2 2026", date: "Jul 15, 2:00 PM", size: "3.2 MB" },
-                { name: "AI Performance Report — July", date: "Aug 1, 9:05 AM", size: "0.9 MB" },
-                { name: "Geographic Analysis — Zone 4", date: "Aug 10, 11:00 AM", size: "4.1 MB" },
-              ].map((r) => (
-                <div
-                  key={r.name}
-                  className="flex items-center justify-between py-2 border-b border-slate-50 hover:bg-slate-50 rounded-lg px-2 transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{r.name}</p>
-                    <p className="text-xs text-slate-400">{r.date} • {r.size}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50">
-                      Download
-                    </button>
-                    <button className="text-xs text-slate-400 border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-50 dark:bg-slate-900">
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {recentReports.length === 0 ? (
+              <div className="py-6 text-center text-xs text-slate-500">
+                No reports generated yet.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentReports.map(
+                  (report) => (
+                    <div
+                      key={report.id}
+                      className="flex items-center justify-between py-2 border-b border-slate-50 hover:bg-slate-50 rounded-lg px-2 transition-colors"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                          {report.name}
+                        </p>
+
+                        <p className="text-xs text-slate-400">
+                          {report.date} •{" "}
+                          {report.records} records •{" "}
+                          {report.size}
+                        </p>
+                      </div>
+
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              filteredGrievances.length ===
+                              0
+                            ) {
+                              alert(
+                                "No current records available for this report."
+                              );
+                              return;
+                            }
+
+                            exportReportCSV();
+                          }}
+                          className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50"
+                        >
+                          Download
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            alert(
+                              `${report.name}\n\nGenerated: ${report.date}\nRecords: ${report.records}\nSize: ${report.size}`
+                            )
+                          }
+                          className="text-xs text-slate-500 border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-50"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </SectionCard>
         </div>
       </div>
